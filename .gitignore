@@ -1,0 +1,11 @@
+*.pyc
+__pycache__/
+
+.venv/
+
+config/
+data/
+
+playlists/
+
+.env
