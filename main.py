@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from core import colors
 from core.config import Config
 from core.logger import console_log
+from core.prefix import prefix
 
 # load and read token from .env
 load_dotenv()
@@ -24,16 +25,6 @@ intents = discord.Intents().all()
 intents.typing = False
 intents.presences = False
 intents.message_content = True
-
-# fetch guild prefix
-def prefix(client, message):
-    config = client.config[message.guild.id]
-
-    pf = config.get(__name__, 'prefix')
-    if pf:
-        return pf
-    else:
-        return "y!"
 
 #bot subclass
 class YaeMiko(commands.Bot):
@@ -94,7 +85,7 @@ async def setprefix(ctx, *, arg):
 
     config = client.config[ctx.guild.id]
 
-    config.set(__name__, 'prefix', arg)
+    config.set('main', 'prefix', arg)
 
     await ctx.send(
         embed = discord.Embed(

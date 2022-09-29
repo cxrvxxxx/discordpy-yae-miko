@@ -4,8 +4,8 @@ import os
 
 from discord.ext import commands
 from core.logger import console_log
+from core.prefix import prefix
 from core import colors
-from main import prefix
 
 # create data directory if non existent
 if not os.path.exists('data'):
