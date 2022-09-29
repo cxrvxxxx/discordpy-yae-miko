@@ -4,6 +4,7 @@ import os
 from discord.ext import commands
 from dotenv import load_dotenv
 
+# core imports
 from core import colors
 from core.config import Config
 from core.logger import console_log
