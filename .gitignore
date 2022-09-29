@@ -3,9 +3,8 @@ __pycache__/
 
 .venv/
 
-config/
-data/
-
-playlists/
+config/*
+data/*
+playlists/*
 
 .env
