@@ -12,6 +12,12 @@ from core.logger import console_log
 load_dotenv()
 token = os.getenv('TOKEN')
 
+# required dirs
+dirs = ["config", "data", "playlists"]
+for dir in dirs:
+    if not os.path.exists(f"./{dir}/"):
+        os.mkdir(dir)
+
 # set intents
 intents = discord.Intents().all()
 intents.typing = False
