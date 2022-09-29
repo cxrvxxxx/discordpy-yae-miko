@@ -425,8 +425,8 @@ class Voice(commands.Cog):
                     except:
                         console_log("Could not clear player because there is none.")
                 
-                    await send_basic_response(channel, f"Disconnecting from **[{member.voice.channel.name}]** and unbound from **[{channel.name}]** since no one else is in the channel.", colors.pink)
-                    await member.guild.voice_client.disconnect()
+                    await send_basic_response(channel, f"Disconnecting from **[{guild.voice_client.channel.name}]** and unbound from **[{channel.name}]** since no one else is in the channel.", colors.pink)
+                    await guild.voice_client.disconnect()
                 else:
                     console_log("Auto-disconnect timer ended. There are users in the channel.")
 
