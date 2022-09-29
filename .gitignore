@@ -7,4 +7,8 @@ config/*
 data/*
 playlists/*
 
+!config/.gitkeep
+!data/.gitkeep
+!playlists/.gitkeep
+
 .env
