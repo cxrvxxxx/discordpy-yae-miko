@@ -1,16 +1,12 @@
 import discord
 import os
-import colors
-import logging
-import asyncio
 
 from discord.ext import commands
 from dotenv import load_dotenv
-from logger import console_log
-from config import Config
 
-# logging
-# logging.basicConfig(level=logging.WARNING)
+from core import colors
+from core.config import Config
+from core.logger import console_log
 
 # load and read token from .env
 load_dotenv()

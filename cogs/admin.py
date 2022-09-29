@@ -1,10 +1,10 @@
 import discord
 import sqlite3
-import colors
 import os
 
 from discord.ext import commands
-from logger import console_log
+from core.logger import console_log
+from core import colors
 from main import prefix
 
 # create data directory if non existent

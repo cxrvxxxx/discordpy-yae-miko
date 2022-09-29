@@ -1,7 +1,6 @@
 import discord
 import asyncio
 import os
-import colors
 import asyncio
 import aiohttp
 import re
@@ -13,7 +12,8 @@ except ImportError:
     has_voice = False
 
 from discord.ext import commands
-from logger import console_log
+from core.logger import console_log
+from core import colors
 
 if has_voice:
     youtube_dl.utils.bug_reports_message = lambda: ''

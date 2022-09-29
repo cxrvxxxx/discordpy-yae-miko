@@ -1,11 +1,11 @@
 import discord
-import colors
 import asyncio
 
 from datetime import datetime
 from discord.ext import commands
 
-from logger import console_log
+from core.logger import console_log
+from core import colors
 
 settings = {
     "message_pool": "5",

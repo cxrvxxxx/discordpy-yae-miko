@@ -1,7 +1,7 @@
 import discord
-import colors
 
 from discord.ext import commands
+from core import colors
 
 class Info(commands.Cog):
     def __init__(self, client):
