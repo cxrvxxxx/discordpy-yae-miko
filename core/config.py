@@ -16,7 +16,7 @@ class Config:
 		self.config.read(self.config_path)
 		value = self.config.get(section, key, fallback=fallback)
 		return value
-
+		
 	def getint(self, section, key, fallback=None):
 		section, key = str(section), str(key)
 		self.config.read(self.config_path)

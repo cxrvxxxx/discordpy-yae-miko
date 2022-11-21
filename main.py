@@ -46,11 +46,6 @@ class YaeMiko(commands.Bot):
         await self.tree.sync(guild=discord.Object(id=907119292410130433))
 
     async def on_ready(self):
-        # init per guild config
-        for guild in client.guilds:
-            config_path = f'./config/{guild.id}.ini'
-            self.config[guild.id] = Config(config_path)
-
         console_log(f"Connected to discord as {client.user}.")
         # set activity status
         await self.change_presence(
@@ -59,6 +54,11 @@ class YaeMiko(commands.Bot):
                 name = "Ei's domain. (y!)"
             )
         )
+
+        # init per guild config
+        for guild in client.guilds:
+            config_path = f'./config/{guild.id}.ini'
+            self.config[guild.id] = Config(config_path)
 
     async def close(self):
         await super().close()
