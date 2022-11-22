@@ -1,66 +1,74 @@
+"""Guild settings config handler"""
 import os
 
 from configparser import ConfigParser
 
 if not os.path.exists('config'):
-	os.mkdir('config')
+    os.mkdir('config')
 
 class Config:
-	def __init__(self, config_path):
-		self.config_path = config_path
-		self.config = ConfigParser()
-		self.config.read(config_path)
+    """Config class"""
+    def __init__(self, config_path):
+        self.config_path = config_path
+        self.config = ConfigParser()
+        self.config.read(config_path)
 
-	def get(self, section, key, fallback=None):
-		section, key = str(section), str(key)
-		self.config.read(self.config_path)
-		value = self.config.get(section, key, fallback=fallback)
-		return value
-		
-	def getint(self, section, key, fallback=None):
-		section, key = str(section), str(key)
-		self.config.read(self.config_path)
-		value = self.config.getint(section, key, fallback=fallback)
-		return value
+    def get(self, section, key, fallback=None):
+        """Returns unformatted value from config"""
+        section, key = str(section), str(key)
+        self.config.read(self.config_path)
+        value = self.config.get(section, key, fallback=fallback)
+        return value
 
-	def getboolean(self, section, key, fallback=None):
-		section, key = str(section), str(key)
-		self.config.read(self.config_path)
-		value = self.config.getboolean(section, key, fallback=fallback)
-		return value
+    def getint(self, section, key, fallback=None):
+        """Returns integer value from config"""
+        section, key = str(section), str(key)
+        self.config.read(self.config_path)
+        value = self.config.getint(section, key, fallback=fallback)
+        return value
 
-	def set(self, section, key, value):
-		key = str(key)
-		value = str(value)
+    def getboolean(self, section, key, fallback=None):
+        """Returns boolean value from config"""
+        section, key = str(section), str(key)
+        self.config.read(self.config_path)
+        value = self.config.getboolean(section, key, fallback=fallback)
+        return value
 
-		self.config.read(self.config_path)
+    def set(self, section, key, value):
+        """Set config value to config"""
+        key = str(key)
+        value = str(value)
 
-		if not (section in self.config.sections()):
-			self.config[section] = {}
+        self.config.read(self.config_path)
 
-		self.config[section][key] = value
+        if not section in self.config.sections():
+            self.config[section] = {}
 
-		with open(self.config_path, 'w') as conf:
-			self.config.write(conf)
+        self.config[section][key] = value
 
-	def delete(self, section, key):
-		key = str(key)
+        with open(self.config_path, 'w', encoding="utf-8") as conf:
+            self.config.write(conf)
 
-		self.config.read(self.config_path)
+    def delete(self, section, key):
+        """Deletes a config value from config"""
+        key = str(key)
 
-		if not (section in self.config.sections()):
-			return
+        self.config.read(self.config_path)
 
-		if not self.get(section, key):
-			return
+        if not section in self.config.sections():
+            return
 
-		self.config[section].pop(key)
+        if not self.get(section, key):
+            return
 
-		with open(self.config_path, 'w') as conf:
-			self.config.write(conf)
+        self.config[section].pop(key)
 
-	def has_section(self, section):
-		if section in self.config.sections():
-			return True
-		else:
-			return False
+        with open(self.config_path, 'w', encoding="utf-8") as conf:
+            self.config.write(conf)
+
+    def has_section(self, section):
+        """Checks if a section exists in config"""
+        if section in self.config.sections():
+            return True
+
+        return False
