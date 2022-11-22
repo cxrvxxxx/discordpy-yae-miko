@@ -86,6 +86,9 @@ class Player(object):
     def get_channel(self):
         return self.__ctx.channel
 
+    def get_volume(self):
+        return self.__volume
+
     async def fetch_track(self, query):
         if query.startswith("https://www.youtube.com/watch?v="):
             src = query

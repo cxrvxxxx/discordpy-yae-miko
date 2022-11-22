@@ -297,7 +297,7 @@ class Voice(commands.Cog):
         player = self.music.get_player(ctx.guild.id)
 
         if not vol:
-            await send_basic_response(ctx, f"Player volume: **{int(volume * 100)}%**.", colors.pink)
+            await send_basic_response(ctx, f"Player volume: **{int(player.get_volume() * 100)}%**.", colors.pink)
             return
 
         if ctx.channel != player.get_channel():
