@@ -1,8 +1,9 @@
+"""Prefix Module"""
+
 def prefix(client, message):
+    """Retrieve custom prefix from config or return default prefix"""
     config = client.config[message.guild.id]
 
-    pf = config.get('main', 'prefix')
-    if pf:
-        return pf
-    else:
-        return "y!"
+    pref = config.get('main', 'prefix')
+
+    return pref if pref else "y!"
