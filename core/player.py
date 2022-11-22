@@ -21,11 +21,11 @@ class Music(object):
     def get_player(self, player_id):
         return self.__players.get(player_id) if player_id in self.__players.keys() else None
 
-    def close_player(self, loop, player_id):
+    def close_player(self, player_id):
         player = self.get_player(player_id)
 
         if player:
-            loop.create_task(player.stop())
+            player.get_loop().create_task(player.stop())
             self.__players.pop(player_id)
 
 class Player(object):
@@ -36,6 +36,7 @@ class Player(object):
         self.__is_playing = False
         self.__now_playing = None
         self.__on_play = on_play
+        self.__volume = 1.0
 
         self.__YDL_OPTIONS = {
             "format": "bestaudio/best",
@@ -54,6 +55,22 @@ class Player(object):
             "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 0 -nostdin"
         }
 
+    @property
+    def now_playing(self):
+        return self.__now_playing
+
+    def set_volume(self, volume):
+        volume = volume if volume in range (1, 100 + 1) else 100
+        self.__volume = volume / 100
+        self.__ctx.voice_client.source.volume = self.__volume
+        return self.__volume
+
+    def dequeue(self, index):
+        return self.__queue.pop(int(index)- 1)
+        
+    def get_loop(self):
+        return self.__loop
+
     def get_queue(self):
         tracklist = []
         
@@ -71,22 +88,22 @@ class Player(object):
 
     async def fetch_track(self, query):
         if query.startswith("https://www.youtube.com/watch?v="):
-            search_url = query
+            src = query
         else:
             search_url = "https://www.youtube.com/results?search_query="
             for key in query.split():
                 search_url += f"{key}+"
             search_url = search_url[:-1]
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(search_url) as response:
-                html = await response.text()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(search_url) as response:
+                    html = await response.text()
 
-        src = "https://www.youtube.com/"
-        for i in range(html.find("watch?v"), len(html)):
-            if html[i] == '"':
-                break
-            src += html[i]
+            src = "https://www.youtube.com/"
+            for i in range(html.find("watch?v"), len(html)):
+                if html[i] == '"':
+                    break
+                src += html[i]
 
         ytdl = youtube_dl.YoutubeDL(self.__YDL_OPTIONS)
         data = await self.__loop.run_in_executor(None, lambda: ytdl.extract_info(src, download = False))
@@ -100,6 +117,7 @@ class Player(object):
         try:
             self.__now_playing = self.__queue.pop(0)
             source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.__now_playing.get_source(), **self.__FFMPEG_OPTS))
+            source.volume = self.__volume
             self.__ctx.voice_client.play(source, after = lambda error: self.play_song())
             
             self.__is_playing = True
