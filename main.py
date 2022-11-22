@@ -6,6 +6,7 @@ Description: A feature-packed Discord bot using discord.py
 """
 # standard imports
 import os
+from typing import Dict
 
 import discord
 from discord.ext import commands
@@ -36,9 +37,22 @@ class YaeMiko(commands.Bot):
     Attributes
     ----------
     prefix
+        character required to use commands
+
+    Methods
+    ----------
+    setup_hook()
+        Performs setup tasks on before the bot starts
+    on_ready()
+        Called when the bot has finished loading
+    close()
+        Bot shutdown
     """
 
-    def __init__(self):
+    prefix: str
+    config: Dict[int, Config]
+
+    def __init__(self) -> None:
         self.prefix = prefix
         self.config = {}
         super().__init__(
@@ -47,7 +61,7 @@ class YaeMiko(commands.Bot):
             intents=discord.Intents().all()
         )
 
-    async def setup_hook(self):
+    async def setup_hook(self) -> None:
         """Performs setup tasks on before the bot starts"""
         for filename in os.listdir("./cogs"):
             if filename.endswith(".py"):
@@ -56,7 +70,7 @@ class YaeMiko(commands.Bot):
 
         await self.tree.sync(guild=discord.Object(id=907119292410130433))
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         """Called when the bot has finished loading"""
         console_log(f"Connected to discord as {client.user}.")
         # set activity status
@@ -72,7 +86,8 @@ class YaeMiko(commands.Bot):
             config_path = f'./config/{guild.id}.ini'
             self.config[guild.id] = Config(config_path)
 
-    async def close(self):
+    async def close(self) -> None:
+        """Bot shutdown"""
         await super().close()
         await self.session.close()
 
@@ -81,7 +96,7 @@ client = YaeMiko()
 
 # command to set prefix per guild
 @client.command()
-async def setprefix(ctx, *, arg):
+async def setprefix(ctx, *, arg) -> None:
     """Sets the bot prefix per guild"""
     model = Database(ctx.guild.id)
 
