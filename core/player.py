@@ -116,8 +116,7 @@ class Player(object):
     def play_song(self):
         try:
             self.__now_playing = self.__queue.pop(0)
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.__now_playing.get_source(), **self.__FFMPEG_OPTS))
-            source.volume = self.__volume
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.__now_playing.get_source(), **self.__FFMPEG_OPTS), volume = self.__volume)
             self.__ctx.voice_client.play(source, after = lambda error: self.play_song())
             
             self.__is_playing = True

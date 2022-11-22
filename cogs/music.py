@@ -292,9 +292,14 @@ class Voice(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.voice_client.disconnect()
 
-    @commands.command()
-    async def volume(self, ctx, vol):
+    @commands.command(aliases=['v', 'vol'])
+    async def volume(self, ctx, vol = None):
         player = self.music.get_player(ctx.guild.id)
+
+        if not vol:
+            await send_basic_response(ctx, f"Player volume: **{int(volume * 100)}%**.", colors.pink)
+            return
+
         if ctx.channel != player.get_channel():
             await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel()}]**.", colors.red)
             return
