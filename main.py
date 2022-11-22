@@ -1,33 +1,42 @@
-import discord
+"""
+Author: cxrvxxx
+Repository URL: https://github.com/cxrvxxx/yae-miko
+Description: A feature-packed Discord bot using discord.py
+"""
+# standard imports
 import os
 
+import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-# core imports
+# bot core imports
 from core import colors
 from core.config import Config
 from core.logger import console_log
 from core.prefix import prefix
+from cogs.admin import Database
 
 # load and read token from .env
 load_dotenv()
 token = os.getenv('TOKEN')
 
 # required dirs
-dirs = ["config", "data", "playlists"]
-for dir in dirs:
-    if not os.path.exists(f"./{dir}/"):
+folders = ["config", "data", "playlists"]
+for folder in folders:
+    if not os.path.exists(f"./{folder}/"):
         os.mkdir(dir)
 
 # set intents
 intents = discord.Intents().all()
-intents.typing = False
-intents.presences = False
-intents.message_content = True
+# intents.typing = False
+# intents.presences = False
+# intents.message_content = True
 
 #bot subclass
 class YaeMiko(commands.Bot):
+    """Main bot subclass"""
+
     def __init__(self):
         self.prefix = prefix
         self.config = {}
@@ -38,14 +47,16 @@ class YaeMiko(commands.Bot):
         )
 
     async def setup_hook(self):
+        """Performs setup tasks on before the bot starts"""
         for filename in os.listdir("./cogs"):
             if filename.endswith(".py"):
                 # cut off the .py from the file name
                 await self.load_extension(f"cogs.{filename[:-3]}")
-        
+
         await self.tree.sync(guild=discord.Object(id=907119292410130433))
 
     async def on_ready(self):
+        """Called when the bot has finished loading"""
         console_log(f"Connected to discord as {client.user}.")
         # set activity status
         await self.change_presence(
@@ -70,11 +81,10 @@ client = YaeMiko()
 # command to set prefix per guild
 @client.command()
 async def setprefix(ctx, *, arg):
-    from cogs.admin import Database as db
+    """Sets the bot prefix per guild"""
+    model = Database(ctx.guild.id)
 
-    db = db(ctx.guild.id)
-    
-    if db.get_access(ctx.author.id) < 3:
+    if model.get_access(ctx.author.id) < 3:
         await ctx.send(
             embed = discord.Embed(
                 description = "You must have at least access level 3 to use this command.",
