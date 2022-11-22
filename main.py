@@ -1,4 +1,5 @@
 """
+Project name: Yae Miko - Discord Bot [discord.py]
 Author: cxrvxxx
 Repository URL: https://github.com/cxrvxxx/yae-miko
 Description: A feature-packed Discord bot using discord.py
@@ -27,15 +28,15 @@ for folder in folders:
     if not os.path.exists(f"./{folder}/"):
         os.mkdir(dir)
 
-# set intents
-intents = discord.Intents().all()
-# intents.typing = False
-# intents.presences = False
-# intents.message_content = True
-
 #bot subclass
 class YaeMiko(commands.Bot):
-    """Main bot subclass"""
+    """
+    The main class used to run the bot
+
+    Attributes
+    ----------
+    prefix
+    """
 
     def __init__(self):
         self.prefix = prefix
@@ -43,7 +44,7 @@ class YaeMiko(commands.Bot):
         super().__init__(
             command_prefix=prefix,
             help_command=None,
-            intents=intents
+            intents=discord.Intents().all()
         )
 
     async def setup_hook(self):

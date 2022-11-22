@@ -284,6 +284,8 @@ class Voice(commands.Cog):
                 await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
                 return
 
+            self.music.close_player(ctx.guild.id)
+
         embed = discord.Embed(
             colour=colors.pink,
             description=f"Disconnected from **[{ctx.voice_client.channel.name}]** and unbound from **[{player.get_channel().name if player else 'channel'}]**."
