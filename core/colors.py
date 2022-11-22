@@ -1,3 +1,4 @@
+"""Define color variables here"""
 import discord
 
 #define colors
