@@ -13,7 +13,7 @@ if not os.path.exists('data'):
 
 # send basic embed without title
 async def send_basic_response(ctx, message, color):
-    await ctx.send(embed = discord.Embed(description = message, colour = color))
+    return await ctx.send(embed = discord.Embed(description = message, colour = color))
 
 class Admin(commands.Cog):
     def __init__(self, client):

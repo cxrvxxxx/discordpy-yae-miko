@@ -9,6 +9,9 @@ import aiohttp
 import youtube_dl
 import discord
 
+from cogs.admin import send_basic_response
+from core import colors
+
 class Song:
     """
     A class used to contain song data
@@ -223,6 +226,7 @@ class Player:
 
     async def fetch_track(self, query: str) -> Song:
         """Process query and returns a song instance"""
+        msg = await send_basic_response(self.__ctx, "Processing query, please wait...", colors.pink)
         # skip process if user passed a youtube URL
         if query.startswith("https://www.youtube.com/watch?v="):
             src = query
@@ -232,6 +236,13 @@ class Player:
             for key in query.split():
                 search_url += f"{key}+"
             search_url = search_url[:-1]
+
+            await msg.edit(
+                embed=discord.Embed(
+                    description="Fetching video...",
+                    color=colors.pink
+                )
+            )
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(search_url) as response:
@@ -243,6 +254,13 @@ class Player:
                     break
                 src += html[i]
 
+        await msg.edit(
+                embed=discord.Embed(
+                    description="Processing video data...",
+                    color=colors.pink
+                )
+            )
+
         ytdl = youtube_dl.YoutubeDL(self.__YDL_OPTIONS)
         data = await self.__loop.run_in_executor(
             None,
@@ -253,10 +271,12 @@ class Player:
         channel = data["uploader"]
         url = "https://www.youtube.com/watch?v=" + data["id"]
         thumbnail = data["thumbnail"]
+        await msg.delete()
         return Song(data["url"], title, channel, url, thumbnail)
 
     def play_song(self) -> None:
         """Handles audio streaming to Discord"""
+        self.__is_playing = False
         try:
             self.__now_playing = self.__queue.pop(0)
             source = discord.PCMVolumeTransformer(
@@ -266,9 +286,12 @@ class Player:
                 ),
                 volume = self.__volume
             )
-            self.__ctx.voice_client.play(source, after = lambda error: self.play_song())
 
-            self.__is_playing = True
+            while not self.__is_playing:
+                self.__ctx.voice_client.play(source, after = lambda error: self.play_song())
+
+                if self.__ctx.voice_client.is_playing():
+                    self.__is_playing = True
 
             if self.__on_play:
                 on_play = self.__ctx.bot.get_command(self.__on_play)

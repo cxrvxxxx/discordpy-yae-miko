@@ -15,13 +15,13 @@ class Info(commands.Cog):
                 title = "Yae Miko | information",
                 description = f"""v1.0 by corveaux
                 
-                Yae Miko provides **essential features** such as:
+                ` **Yae Miko** ` provides **essential features** such as:
                    - Server Management
                    - Security
                    - Entertainment (Games, Music)
                    - and many more!
                    
-                The prefix for Yae Miko commands is '**{pf}**'""",
+                The prefix for Yae Miko commands is ` **{pf}** `""",
                 colour = colors.pink
             )
         )

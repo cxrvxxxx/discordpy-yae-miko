@@ -85,6 +85,7 @@ class YaeMiko(commands.Bot):
         for guild in client.guilds:
             config_path = f'./config/{guild.id}.ini'
             self.config[guild.id] = Config(config_path)
+            self.config[guild.id].set('main', 'name', guild.name)
 
     async def close(self) -> None:
         """Bot shutdown"""
