@@ -176,15 +176,24 @@ class Voice(commands.Cog):
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
-        songs = ""
-        if len(queue) <= 1:
-            songs = "There are no songs in the queue."
-        else:
+        songs = "There are no songs in the queue."
+
+        if len(queue) > 1:
+            songs = ""
+            overflow = 0
+
             for index, song in enumerate(queue):
                 if index == 0:
-                    pass
+                    continue
+
+                line = f"\n `{index}` {song.get_title()}"
+                if index < 10:
+                    songs += line
                 else:
-                    songs = songs + f"\n `{index}` {song.get_title()}"
+                    overflow += 1
+
+            if overflow > 0:
+                songs += f"\n\n...and **` {overflow} `** more songs."
 
         embed.add_field(
             name="🎶 Up Next...",
@@ -386,9 +395,14 @@ class Voice(commands.Cog):
         if not ctx.voice_client:
             await ctx.invoke(self.client.get_command('join'))
 
-        # if ctx.channel != self.channels[ctx.guild.id]:
-        #     await send_basic_response(ctx, f"The player can only be controlled from **[{self.channels[ctx.guild.id]}]**.", colors.red)
-        #     return
+        player = self.music.get_player(ctx.guild.id)
+
+        if not player:
+            player = self.music.create_player(ctx, "nowplaying")
+
+        if ctx.channel != player.get_channel():
+            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            return
 
         with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as f:
             songs = f.read().splitlines()
@@ -400,22 +414,40 @@ class Voice(commands.Cog):
                 await send_basic_response(ctx, "Invalid song ID.", colors.red)
                 return
 
-            await ctx.invoke(self.client.get_command('play'), query=songs[number])
+            await player.play(songs[number])
             return
 
-        for song in songs:
-            await ctx.invoke(self.client.get_command('play'), query=song)
-
-        embed = discord.Embed(
-            colour=colors.pink,
-            title="❤️ Playing songs that you like",
-            description="".join(
-                [f"`{index}` {song}\n" for index, song in enumerate(songs, start=1)]
+        desc = "Processing, please wait..."
+        msg = await player.get_channel().send(
+            embed=discord.Embed(
+                colour=colors.pink,
+                title="❤️ Playing songs that you like",
+                description=desc
             )
         )
-        await ctx.send(embed=embed)
 
-    # TODO: pause, resume, volume
+        desc = ""
+        for index, song in enumerate(songs, start=1):
+            desc += f"`{index}` {song}\n"
+            
+            await msg.edit(
+                embed=discord.Embed(
+                    colour=colors.pink,
+                    title=f"❤️ Playing songs that you like ({index}/{len(songs)})",
+                    description=desc
+                )
+            )
+            await player.play(song, silent=True)
+
+        await msg.edit(
+            embed=discord.Embed(
+                colour=colors.pink,
+                title=f"❤️ Playing songs that you like",
+                description=desc
+            )
+        )
+
+    # TODO: pause, resume
 
 async def setup(client):
     await client.add_cog(Voice(client))

@@ -3,7 +3,7 @@ Music Player
     - Provides an easy way to stream audio to discord
       from a song title or a youtube link.
 """
-from typing import List, Dict, ClassVar, Optional, Any, Union
+from typing import List, Dict, ClassVar, Optional, Any, Union, Optional
 
 import aiohttp
 import youtube_dl
@@ -206,14 +206,16 @@ class Player:
     def get_queue(self) -> List[Song]:
         """Fetch current player queue"""
         tracklist = []
+        overflow = 0
 
         if self.__now_playing:
             tracklist.append(self.__now_playing)
 
         if len(self.__queue) > 0:
             for song in self.__queue:
-                tracklist.append(song)
-
+                if overflow < 15:
+                    tracklist.append(song)
+                
         return tracklist
 
     def get_channel(self) -> discord.TextChannel:
@@ -274,7 +276,7 @@ class Player:
         await msg.delete()
         return Song(data["url"], title, channel, url, thumbnail)
 
-    def play_song(self) -> None:
+    def play_song(self, silent: Optional[bool] = False) -> None:
         """Handles audio streaming to Discord"""
         self.__is_playing = False
         try:
@@ -293,18 +295,15 @@ class Player:
                 if self.__ctx.voice_client.is_playing():
                     self.__is_playing = True
 
-            if self.__on_play:
+            if self.__on_play and not silent:
                 on_play = self.__ctx.bot.get_command(self.__on_play)
 
                 if on_play:
                     self.__loop.create_task(self.__ctx.invoke(on_play))
         except IndexError:
             self.__is_playing = False
-            print("Reached end of queue") # remove after debugging
-            print(self.__now_playing)
-            return
 
-    async def play(self, query: str) -> Dict[str, Union[bool, Song]]:
+    async def play(self, query: str, silent: Optional[bool] = False) -> Dict[str, Union[bool, Song]]:
         """Entry point for playing audio"""
         song = await self.fetch_track(query)
 
@@ -312,7 +311,7 @@ class Player:
             self.__queue.append(song)
 
         if not self.__is_playing:
-            self.play_song()
+            song = self.play_song(silent=silent)
 
         return {
             "queued": song in self.__queue,
