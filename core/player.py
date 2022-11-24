@@ -3,14 +3,14 @@ Music Player
     - Provides an easy way to stream audio to discord
       from a song title or a youtube link.
 """
-from typing import List, Dict, ClassVar, Optional, Any, Union, Optional
+from typing import List, Dict, ClassVar, Optional, Any, Union
 
 import aiohttp
 import youtube_dl
 import discord
 
-from cogs.admin import send_basic_response
 from core import colors
+from cogs.admin import send_basic_response
 
 class Song:
     """
@@ -215,7 +215,7 @@ class Player:
             for song in self.__queue:
                 if overflow < 15:
                     tracklist.append(song)
-                
+
         return tracklist
 
     def get_channel(self) -> discord.TextChannel:
@@ -301,7 +301,10 @@ class Player:
                 if on_play:
                     self.__loop.create_task(self.__ctx.invoke(on_play))
         except IndexError:
+            self.__now_playing = None
             self.__is_playing = False
+
+        return self.__now_playing
 
     async def play(self, query: str, silent: Optional[bool] = False) -> Dict[str, Union[bool, Song]]:
         """Entry point for playing audio"""
