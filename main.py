@@ -68,7 +68,8 @@ class YaeMiko(commands.Bot):
                 # cut off the .py from the file name
                 await self.load_extension(f"cogs.{filename[:-3]}")
 
-        await self.tree.sync(guild=discord.Object(id=907119292410130433))
+        synced = await self.tree.sync(guild=discord.Object(id=907119292410130433))
+        print(f"Synced {len(synced)} command(s).")
 
     async def on_ready(self) -> None:
         """Called when the bot has finished loading"""
@@ -119,6 +120,12 @@ async def setprefix(ctx, *, arg) -> None:
             description = f"Server prefix has been set to **[{arg}]**.",
             colour = colors.pink
         )
+    )
+
+@client.tree.command(name="ping", description="Pong!")
+async def ping(interaction: discord.Interaction) -> None:
+    await interaction.send(
+        content = "Pong!"
     )
 
 # run bot
