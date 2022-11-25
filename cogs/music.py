@@ -2,10 +2,11 @@ import os
 import asyncio
 import discord
 from discord.ext import commands
-from core.player import Music
 from core import colors
+from core.player import Music
 from cogs.admin import send_basic_response
 from core.logger import console_log
+from core.ui import player_controls
 
 # default config values
 settings = {
@@ -105,7 +106,8 @@ class Voice(commands.Cog):
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=10)
+            await ctx.message.delete()
 
     @commands.command(aliases=['np'])
     async def nowplaying(self, ctx):
@@ -140,7 +142,10 @@ class Voice(commands.Cog):
             )
 
         embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
-        await ctx.send(embed=embed)
+        if player.last_np_msg:
+            await player.last_np_msg.delete()
+
+        player.last_np_msg = await ctx.send(embed=embed, view=player_controls(ctx))
 
     @commands.command(aliases=['q'])
     async def queue(self, ctx):
@@ -200,7 +205,8 @@ class Voice(commands.Cog):
         )
 
         embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=10)
+        await ctx.message.delete()
 
     @commands.command(aliases=['rm'])
     async def remove(self, ctx, index):
@@ -252,7 +258,38 @@ class Voice(commands.Cog):
         )
 
         embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=10)
+        await ctx.message.delete()
+
+    @commands.command()
+    async def prev(self, ctx):
+        if not ctx.author.voice:
+            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            return
+
+        player = self.music.get_player(ctx.guild.id)
+
+        if not player:
+            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            return
+
+        if ctx.channel != player.get_channel():
+            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            return
+
+        song = await player.prev()
+
+        if not song:
+            await send_basic_response(ctx, f"Cannot play previous song.", colors.red)
+            return
+
+        embed = discord.Embed(
+            colour=colors.pink,
+            description=f"Playing last song, 🎶 **{song.get_title()}**."
+        )
+
+        await ctx.send(embed=embed, delete_after=10)
+        await ctx.message.delete()
 
     @commands.command()
     async def skip(self, ctx):
@@ -273,10 +310,76 @@ class Voice(commands.Cog):
         song = await player.skip()
 
         if not song:
-            await send_basic_response(ctx, f"There is nothing to skip**.", colors.red)
+            await send_basic_response(ctx, f"Cannot skip because the queue is empty.", colors.red)
             return
 
-        await send_basic_response(ctx, f"Skipping 🎶 **{song.get_title()}**.", colors.pink)
+        embed = discord.Embed(
+            colour=colors.pink,
+            description=f"Skipping 🎶 **{song.get_title()}**."
+        )
+
+        await ctx.send(embed=embed, delete_after=10)
+        await ctx.message.delete()
+
+    @commands.command()
+    async def pause(self, ctx):
+        if not ctx.author.voice:
+            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            return
+
+        player = self.music.get_player(ctx.guild.id)
+
+        if not player:
+            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            return
+
+        if ctx.channel != player.get_channel():
+            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            return
+
+        song = await player.pause()
+
+        if not song:
+            await send_basic_response(ctx, f"Cannot skip because the queue is empty.", colors.red)
+            return
+
+        embed = discord.Embed(
+            colour=colors.pink,
+            description=f"Paused 🎶 **{song.get_title()}**."
+        )
+
+        await ctx.send(embed=embed, delete_after=10)
+        await ctx.message.delete()
+
+    @commands.command()
+    async def resume(self, ctx):
+        if not ctx.author.voice:
+            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            return
+
+        player = self.music.get_player(ctx.guild.id)
+
+        if not player:
+            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            return
+
+        if ctx.channel != player.get_channel():
+            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            return
+
+        song = await player.resume()
+
+        if not song:
+            await send_basic_response(ctx, f"Cannot skip because the queue is empty.", colors.red)
+            return
+
+        embed = discord.Embed(
+            colour=colors.pink,
+            description=f"Resumed 🎶 **{song.get_title()}**."
+        )
+
+        await ctx.send(embed=embed, delete_after=10)
+        await ctx.message.delete()
 
     @commands.command(aliases=['disconnect', 'dc'])
     async def leave(self, ctx):
@@ -298,8 +401,8 @@ class Voice(commands.Cog):
             description=f"Disconnected from **[{ctx.voice_client.channel.name}]** and unbound from **[{player.get_channel().name if player else 'channel'}]**."
         )        
 
-        await ctx.send(embed=embed)
         await ctx.voice_client.disconnect()
+        await ctx.send(embed=embed)
 
     @commands.command(aliases=['v', 'vol'])
     async def volume(self, ctx, vol = None):
@@ -329,7 +432,12 @@ class Voice(commands.Cog):
 
         volume = player.set_volume(vol)
 
-        await send_basic_response(ctx, f"Volume set to **{int(volume * 100)}%**.", colors.pink)
+        embed = discord.Embed(
+            colour=colors.pink,
+            description=f"Volume set to **{int(volume * 100)}%**."
+        )
+
+        await ctx.send(embed=embed, delete_after=10)
 
     @commands.command()
     async def fave(self, ctx):
@@ -442,7 +550,7 @@ class Voice(commands.Cog):
                 colour=colors.pink,
                 title=f"❤️ Playing songs that you like",
                 description=desc
-            )
+            ), view=player_controls(ctx)
         )
 
     # TODO: pause, resume

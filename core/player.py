@@ -6,6 +6,7 @@ Music Player
 from typing import List, Dict, ClassVar, Optional, Any, Union
 
 import aiohttp
+import asyncio
 import youtube_dl
 import discord
 
@@ -148,7 +149,7 @@ class Player:
         Stop audio stream
     """
     __ctx: discord.ext.commands.Context
-    __loop: Any
+    __loop: asyncio.BaseEventLoop
     __queue: List[Song]
     __is_playing: bool
     __now_playing: Song
@@ -156,6 +157,7 @@ class Player:
     __volume: float
     __YDL_OPTIONS: Dict[str, Union[str, bool]]
     __FFMPEG_OPTS: Dict[str, str]
+    last_np_msg: discord.Message
 
     def __init__(self, ctx: discord.ext.commands.Context, on_play: str) -> None:
         self.__ctx = ctx
@@ -163,8 +165,10 @@ class Player:
         self.__queue = []
         self.__is_playing = False
         self.__now_playing = None
+        self.__last_song = None
         self.__on_play = on_play
         self.__volume = 1.0
+        self.last_np_msg = None
 
         self.__YDL_OPTIONS = {
             "format": "bestaudio/best",
@@ -184,9 +188,17 @@ class Player:
         }
 
     @property
+    def is_playing(self) -> bool:
+        return self.__is_playing
+
+    @property
     def now_playing(self) -> Song:
         """Fetch currently playing song"""
         return self.__now_playing
+
+    @property
+    def last_song(self) -> Song:
+        return self.__last_song
 
     def set_volume(self, volume: int) -> float:
         """Set player volume"""
@@ -280,6 +292,7 @@ class Player:
         """Handles audio streaming to Discord"""
         self.__is_playing = False
         try:
+            self.__last_song = self.__now_playing
             self.__now_playing = self.__queue.pop(0)
             source = discord.PCMVolumeTransformer(
                 discord.FFmpegPCMAudio(
@@ -303,12 +316,23 @@ class Player:
         except IndexError:
             self.__now_playing = None
             self.__is_playing = False
+            if self.last_np_msg:
+                self.__loop.create_task(
+                    self.last_np_msg.edit(
+                        view=None
+                    )
+                )
 
         return self.__now_playing
 
     async def play(self, query: str, silent: Optional[bool] = False) -> Dict[str, Union[bool, Song]]:
         """Entry point for playing audio"""
         song = await self.fetch_track(query)
+
+        try:
+            assert song is not None
+        except:
+            print(f"Failed to fetch data for query: {query}.")
 
         if song:
             self.__queue.append(song)
@@ -324,12 +348,32 @@ class Player:
     async def skip(self) -> Union[Song, None]:
         """Skip currently playing song"""
         if self.__is_playing:
-            song = self.__now_playing
             self.__ctx.voice_client.stop()
-            self.play_song()
-            return song
 
-        return
+        return self.__now_playing
+
+    async def prev(self) -> Union[Song, None]:
+        """Play the previous song"""
+        if self.__is_playing and self.__last_song:
+            self.__queue.insert(0, self.__last_song)
+            self.__last_song = None
+            self.__ctx.voice_client.stop()
+            
+            return self.__now_playing
+
+    async def pause(self) -> Union[Song, None]:
+        if self.__is_playing:
+            self.__is_playing = False
+            self.__ctx.voice_client.pause()
+
+            return self.now_playing
+
+    async def resume(self) -> Union[Song, None]:
+        if not self.__is_playing:
+            self.__is_playing = True
+            self.__ctx.voice_client.resume()
+
+            return self.now_playing
 
     async def stop(self) -> None:
         """Stop audio stream"""
