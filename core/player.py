@@ -309,10 +309,11 @@ class Player:
                 volume = self.__volume
             )
 
-            while True:
+            for i in range(1, 3 + 1):
                 self.__ctx.voice_client.play(source, after = lambda error: self.play_song())
 
                 if self.__ctx.voice_client.is_playing():
+                    logger.debug(f"Playback failed. Retry: {i} (ID: {self.__ctx.guild.id})")
                     break
 
             self.__is_playing = True

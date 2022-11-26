@@ -18,24 +18,24 @@ class Admin(commands.Cog):
         self.client = client
         self.config = client.config
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        pf = prefix(self.client, message)
-        if message.author == self.client.user:
-            return
+    # @commands.Cog.listener()
+    # async def on_message(self, message):
+    #     pf = prefix(self.client, message)
+    #     if message.author == self.client.user:
+    #         return
 
-        ctx = await self.client.get_context(message)
-        if ctx:
-            if ctx.command and not ctx.command_failed:
-                console_log(ascii(f"{ctx.guild.name}/{ctx.channel.name}/{ctx.author.nick if ctx.author.nick else ctx.author.name}: {ctx.message.content}"))
+    #     ctx = await self.client.get_context(message)
+    #     if ctx:
+    #         if ctx.command and not ctx.command_failed:
+    #             console_log(ascii(f"{ctx.guild.name}/{ctx.channel.name}/{ctx.author.nick if ctx.author.nick else ctx.author.name}: {ctx.message.content}"))
 
-            # delete non yae command messages in yae channel
-            config = self.config.get(ctx.guild.id)
-            if config.getint(__name__, 'yae_channel') == ctx.channel.id:
-                ctx = await self.client.get_context(message)
-                if not message.content.startswith(pf) or not ctx.command:
-                    await message.delete()
-                    await ctx.send(embed = discord.Embed(description = f"Invalid command: '{message.content}'.\n\n**Invalid commands will be deleted in this channel.**", colour = colors.pink), delete_after=10)
+    #         # delete non yae command messages in yae channel
+    #         config = self.config.get(ctx.guild.id)
+    #         if config.getint(__name__, 'yae_channel') == ctx.channel.id:
+    #             ctx = await self.client.get_context(message)
+    #             if not message.content.startswith(pf) or not ctx.command:
+    #                 await message.delete()
+    #                 await ctx.send(embed = discord.Embed(description = f"Invalid command: '{message.content}'.\n\n**Invalid commands will be deleted in this channel.**", colour = colors.pink), delete_after=10)
 
     @commands.command()
     async def setprefix(self, ctx, *, pref) -> None:
