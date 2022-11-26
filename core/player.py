@@ -10,8 +10,12 @@ import asyncio
 import youtube_dl
 import discord
 
+import logsettings
 from core import colors
 from cogs.admin import send_basic_response
+
+# Logger
+logger = logsettings.logging.getLogger("musicplayer")
 
 class Song:
     """
@@ -244,6 +248,7 @@ class Player:
         # skip process if user passed a youtube URL
         if query.startswith("https://www.youtube.com/watch?v="):
             src = query
+            logger.debug(f"Received video URL, parsing skipped (ID: {self.__ctx.guild.id})")
         # otherwise, process query to get a yotuube link
         else:
             search_url = "https://www.youtube.com/results?search_query="
@@ -257,10 +262,12 @@ class Player:
                     color=colors.pink
                 )
             )
+            logger.debug(f"Parsed query into YTSearch URL (ID: {self.__ctx.guild.id})")
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(search_url) as response:
                     html = await response.text()
+            logger.debug(f"Retrieved HTML data (ID: {self.__ctx.guild.id})")
 
             src = "https://www.youtube.com/"
             for i in range(html.find("watch?v"), len(html)):
@@ -280,6 +287,7 @@ class Player:
             None,
             lambda: ytdl.extract_info(src, download = False)
         )
+        logger.debug(f"Extracted video data from URL (ID: {self.__ctx.guild.id})")
 
         title = data["title"]
         channel = data["uploader"]
@@ -308,15 +316,18 @@ class Player:
                     break
 
             self.__is_playing = True
+            logger.debug(f"Transitioned to next song in the queue (ID: {self.__ctx.guild.id})")
 
             if self.__on_play and not silent:
                 on_play = self.__ctx.bot.get_command(self.__on_play)
 
                 if on_play:
                     self.__loop.create_task(self.__ctx.invoke(on_play))
+                    logger.debug(f"Executed on-play hook (ID: {self.__ctx.guild.id})")
         except IndexError: # Expected error when there are no more tracks in queue
             self.__now_playing = None
             self.__is_playing = False
+            logger.debug(f"Playback failed, queue might be empty (ID: {self.__ctx.guild.id})")
 
             # Remove controls from latest "now playing" message
             if self.last_np_msg:
@@ -336,11 +347,13 @@ class Player:
             assert song is not None
         except:
             print(f"Failed to fetch data for query: {query}.")
+            logger.debug(f"Failed to fetch song data (ID: {self.__ctx.guild.id})")
 
         if song:
             self.__queue.append(song)
 
         if not self.__is_playing:
+            logger.debug(f"Started playback (ID: {self.__ctx.guild.id})")
             song = self.play_song(silent=silent)
 
         return {
@@ -352,6 +365,7 @@ class Player:
         """Skip currently playing song"""
         if self.__is_playing:
             self.__ctx.voice_client.stop()
+            logger.debug(f"Skippped to next track (ID: {self.__ctx.guild.id})")
 
         return self.__now_playing
 
@@ -361,6 +375,7 @@ class Player:
             self.__queue.insert(0, self.__last_song)
             self.__last_song = None
             self.__ctx.voice_client.stop()
+            logger.debug(f"Skipped to previous track (ID: {self.__ctx.guild.id})")
             
             return self.__now_playing
 
@@ -368,6 +383,7 @@ class Player:
         if self.__is_playing:
             self.__is_playing = False
             self.__ctx.voice_client.pause()
+            logger.debug(f"Paused playback (ID: {self.__ctx.guild.id})")
 
             return self.now_playing
 
@@ -375,6 +391,7 @@ class Player:
         if not self.__is_playing:
             self.__is_playing = True
             self.__ctx.voice_client.resume()
+            logger.debug(f"Resumed playback (ID: {self.__ctx.guild.id})")
 
             return self.now_playing
 
@@ -384,6 +401,7 @@ class Player:
             self.__now_playing = None
             self.__queue.clear()
             self.__ctx.voice_client.stop()
+            logger.debug(f"Stopped playback (ID: {self.__ctx.guild.id})")
 
 class Music:
     """
@@ -419,6 +437,7 @@ class Music:
 
         player = Player(ctx, on_play)
         self.__players[ctx.guild.id] = player
+        logger.debug(f"Created player instance in guild: {player.get_channel().guild.id}")
         return player
 
     def get_player(self, player_id: int) -> Player:
@@ -430,5 +449,6 @@ class Music:
         player = self.get_player(player_id)
 
         if player:
+            logger.debug(f"Destroyed player in guild: {player.get_channel().guild.id}")
             player.get_loop().create_task(player.stop())
             self.__players.pop(player_id)

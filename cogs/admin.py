@@ -7,7 +7,7 @@ from discord.ext import commands
 from core.logger import console_log
 from core.prefix import prefix
 from core import colors
-from core.message import send_basic_response
+from core.message import *
 
 # create data directory if non existent
 if not os.path.exists('data'):
@@ -36,6 +36,31 @@ class Admin(commands.Cog):
                 if not message.content.startswith(pf) or not ctx.command:
                     await message.delete()
                     await ctx.send(embed = discord.Embed(description = f"Invalid command: '{message.content}'.\n\n**Invalid commands will be deleted in this channel.**", colour = colors.pink), delete_after=10)
+
+    @commands.command()
+    async def setprefix(self, ctx, *, pref) -> None:
+        """Sets the bot prefix per guild"""
+        model = Database(ctx.guild.id)
+
+        if model.get_access(ctx.author.id) < 3:
+            await ctx.send(
+                embed = discord.Embed(
+                    description = "You must have at least access level 3 to use this command.",
+                    colour = colors.red
+                )
+            )
+            return
+
+        config = self.client.config[ctx.guild.id]
+
+        config.set('main', 'prefix', pref)
+
+        await ctx.send(
+            embed = discord.Embed(
+                description = f"Server prefix has been set to **[{pref}]**.",
+                colour = colors.pink
+            )
+        )
 
     @commands.command()
     async def yaechannel(self, ctx, arg=None):

@@ -6,6 +6,7 @@ __pycache__/
 config/*
 data/*
 playlists/*
+logs/*
 
 !config/.gitkeep
 !data/.gitkeep

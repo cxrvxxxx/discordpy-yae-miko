@@ -58,7 +58,7 @@ class StopButton(Button):
         await interaction.message.edit(view=None)
 
 def player_controls(ctx, freeze: bool = False, paused: bool = False):
-        view = View()
+        view = View(timeout=None)
         play_button = PlayButton(ctx, freeze) if paused else PauseButton(ctx, freeze)
         BUTTONS = (PrevButton(ctx, freeze), play_button, StopButton(ctx, freeze), NextButton(ctx, freeze))
 
