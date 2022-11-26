@@ -341,24 +341,26 @@ class Player:
 
     async def play(self, query: str, silent: Optional[bool] = False) -> Dict[str, Union[bool, Song]]:
         """Entry point for playing audio"""
-        song = await self.fetch_track(query)
+        for i in range(1, 3 + 1):
+            song = await self.fetch_track(query)
 
-        try:
-            assert song is not None
-        except:
-            print(f"Failed to fetch data for query: {query}.")
-            logger.debug(f"Failed to fetch song data (ID: {self.__ctx.guild.id})")
+            if song:
+                logger.debug(f"Video data fetched (ID: {self.__ctx.guild.id})")
+                break
+
+            logger.debug(f"Failed to fetch song data. Retry: {i} (ID: {self.__ctx.guild.id})")
 
         if song:
             self.__queue.append(song)
+            logger.debug(f"Queued track (ID: {self.__ctx.guild.id})")
 
-        if not self.__is_playing:
+        if not self.__is_playing and song:
             logger.debug(f"Started playback (ID: {self.__ctx.guild.id})")
             song = self.play_song(silent=silent)
 
         return {
             "queued": song in self.__queue,
-            "song": song
+            "song": song if song else None
         }
 
     async def skip(self) -> Union[Song, None]:
