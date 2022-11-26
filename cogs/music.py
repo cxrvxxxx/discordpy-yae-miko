@@ -4,9 +4,9 @@ import discord
 from discord.ext import commands
 from core import colors
 from core.player import Music
-from cogs.admin import send_basic_response
 from core.logger import console_log
 from core.ui import player_controls
+from core.message import *
 
 # default config values
 settings = {
@@ -58,7 +58,7 @@ class Voice(commands.Cog):
             channel = self.music.get_player(guild.id).get_channel()
             self.music.close_player(guild.id)
         
-            await send_basic_response(channel, f"Disconnecting from voice since no one else is in the channel.", colors.pink)
+            await send_notif(channel, Responses.bot_disconnect)
             await guild.voice_client.disconnect()
         else:
             console_log("Auto-disconnect timer ended. There are users in the channel.")
@@ -66,24 +66,45 @@ class Voice(commands.Cog):
     @commands.command()
     async def join(self, ctx):
         if not ctx.author.voice:
-            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
         if ctx.voice_client:
-            await send_basic_response(ctx, f"Already connected to voice channel **[{ctx.voice_client.channel.name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.bot_is_connected.format(
+                    channel_name=ctx.voice_client.channel.name
+                )
+            )
             return
 
         await ctx.author.voice.channel.connect()
 
     @commands.command(aliases=['p'])
     async def play(self, ctx, *, query):
+        try:
+            await ctx.message.delete()
+        except Exception as e:
+            print(e)
+
         if not ctx.author.voice:
-            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
 
         player = self.music.get_player(ctx.guild.id)
 
         if player and ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         if not ctx.voice_client:
@@ -91,7 +112,13 @@ class Voice(commands.Cog):
 
         if not player:
             player = self.music.create_player(ctx, on_play = "nowplaying")
-            await send_basic_response(ctx, f"Connected to **[{ctx.author.voice.channel.name}]** and bound to **[{ctx.channel.name}]**.", colors.pink)
+            await send_notif(
+                ctx,
+                Responses.bot_on_connect.format(
+                    vc_name=ctx.author.voice.channel.name,
+                    channel_name=ctx.channel.name
+                )
+            )
 
         result = await player.play(query)
         if result.get("queued"):
@@ -107,7 +134,6 @@ class Voice(commands.Cog):
             )
 
             await ctx.send(embed=embed, delete_after=10)
-            await ctx.message.delete()
 
     @commands.command(aliases=['np'])
     async def nowplaying(self, ctx):
@@ -116,17 +142,28 @@ class Voice(commands.Cog):
         player = self.music.get_player(ctx.guild.id)
 
         if not player:
-            await send_basic_response (ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         queue = player.get_queue()
 
         if not queue:
-            await send_basic_response (ctx, "The queue is **empty** because there is nothing being currently played.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_empty_queue
+            )
             return
 
         embed = discord.Embed(
@@ -149,22 +186,34 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['q'])
     async def queue(self, ctx):
+        await ctx.message.delete()
         pf = self.client.prefix(self.client, ctx.message)
 
         player = self.music.get_player(ctx.guild.id)
 
         if not player:
-            await send_basic_response (ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         queue = player.get_queue()
 
         if not queue:
-            await send_basic_response (ctx, "The queue is **empty** because there is nothing being currently played.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_empty_queue
+            )
             return
 
         embed = discord.Embed(
@@ -206,7 +255,6 @@ class Voice(commands.Cog):
 
         embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
         await ctx.send(embed=embed, delete_after=10)
-        await ctx.message.delete()
 
     @commands.command(aliases=['rm'])
     async def remove(self, ctx, index):
@@ -215,18 +263,29 @@ class Voice(commands.Cog):
         player = self.music.get_player(ctx.guild.id)
 
         if not player:
-            await send_basic_response (ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         song = player.dequeue(index)
         queue = player.get_queue()
 
         if not queue:
-            await send_basic_response (ctx, "The queue is **empty** because there is nothing being currently played.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_empty_queue
+            )
             return
 
         embed = discord.Embed(
@@ -259,28 +318,43 @@ class Voice(commands.Cog):
 
         embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
         await ctx.send(embed=embed, delete_after=10)
+
         await ctx.message.delete()
 
     @commands.command()
-    async def prev(self, ctx):
+    async def prev(self, ctx, normal: bool = True):
         if not ctx.author.voice:
-            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
 
         player = self.music.get_player(ctx.guild.id)
 
         if not player:
-            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         song = await player.prev()
 
         if not song:
-            await send_basic_response(ctx, f"Cannot play previous song.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_previous
+            )
             return
 
         embed = discord.Embed(
@@ -289,28 +363,47 @@ class Voice(commands.Cog):
         )
 
         await ctx.send(embed=embed, delete_after=10)
+
+        # if invoked from button callback
+        if not normal:
+            return
+
         await ctx.message.delete()
 
     @commands.command()
-    async def skip(self, ctx):
+    async def skip(self, ctx, normal: bool = True):
         if not ctx.author.voice:
-            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
 
         player = self.music.get_player(ctx.guild.id)
 
         if not player:
-            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         song = await player.skip()
 
         if not song:
-            await send_basic_response(ctx, f"Cannot skip because the queue is empty.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_skip
+            )
             return
 
         embed = discord.Embed(
@@ -319,28 +412,47 @@ class Voice(commands.Cog):
         )
 
         await ctx.send(embed=embed, delete_after=10)
+
+        # if invoked from button callback
+        if not normal:
+            return
+
         await ctx.message.delete()
 
     @commands.command()
-    async def pause(self, ctx):
+    async def pause(self, ctx, normal: bool = True):
         if not ctx.author.voice:
-            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
 
         player = self.music.get_player(ctx.guild.id)
 
         if not player:
-            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         song = await player.pause()
 
         if not song:
-            await send_basic_response(ctx, f"Cannot skip because the queue is empty.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_pause
+            )
             return
 
         embed = discord.Embed(
@@ -349,28 +461,47 @@ class Voice(commands.Cog):
         )
 
         await ctx.send(embed=embed, delete_after=10)
+
+        # if invoked from button callback
+        if not normal:
+            return
+
         await ctx.message.delete()
 
     @commands.command()
-    async def resume(self, ctx):
+    async def resume(self, ctx, normal: bool = True):
         if not ctx.author.voice:
-            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
 
         player = self.music.get_player(ctx.guild.id)
 
         if not player:
-            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         song = await player.resume()
 
         if not song:
-            await send_basic_response(ctx, f"Cannot skip because the queue is empty.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_resume
+            )
             return
 
         embed = discord.Embed(
@@ -379,19 +510,32 @@ class Voice(commands.Cog):
         )
 
         await ctx.send(embed=embed, delete_after=10)
+
+        # if invoked from button callback
+        if not normal:
+            return
+
         await ctx.message.delete()
 
     @commands.command(aliases=['disconnect', 'dc'])
     async def leave(self, ctx):
         if not ctx.voice_client:
-            await send_basic_response(ctx, "Not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.bot_not_connected
+            )
             return
 
         player = self.music.get_player(ctx.guild.id)
 
         if player:
             if ctx.channel != player.get_channel():
-                await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+                await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
                 return
 
             self.music.close_player(ctx.guild.id)
@@ -409,25 +553,44 @@ class Voice(commands.Cog):
         player = self.music.get_player(ctx.guild.id)
 
         if not vol:
-            await send_basic_response(ctx, f"Player volume: **{int(player.get_volume() * 100)}%**.", colors.pink)
+            await send_notif(
+                ctx,
+                Responses.music_player_volume.format(
+                    volume=int(player.get_volume() * 100)
+                )
+            )
             return
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel()}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         vol = float(vol)
         if vol < 0 or vol > 100:
-            await send_basic_response(ctx, "The volume must be between **0** to **100**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_player_volume_invalid
+            )
             return
 
         if not ctx.author.voice:
-            await send_basic_response(ctx, "You are not connected to a **voice channel**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
 
         
         if not player:
-            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         volume = player.set_volume(vol)
@@ -443,18 +606,29 @@ class Voice(commands.Cog):
     async def fave(self, ctx):
         player = self.music.get_player(ctx.guild.id)
         if not player:
-            await send_basic_response(ctx, "There is no **active player**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_no_player
+            )
             return
 
         song = player.now_playing
         if not song:
-            await send_basic_response(ctx, "There is no **song** currently playing.", colors.red)
+            await send_notif(
+                ctx,
+                Responses.music_player_no_song
+            )
             return
 
         with open(f"playlists/{ctx.author.id}.txt", 'a', encoding="utf8") as f:
             f.write(f"{song.get_title()}\n")
 
-        await send_basic_response(ctx, f"Added **{song.get_title()}** to your favorites.", colors.pink)
+        await send_notif(
+            ctx,
+            Responses.music_player_fav_add.format(
+                title=song.get_title()
+            )
+        )
 
     @commands.command()
     async def unfave(self, ctx, i: int):
@@ -465,7 +639,12 @@ class Voice(commands.Cog):
         playlist = ""
         for index, song in enumerate(songs):
             if index == i:
-                await send_basic_response(ctx, f"**{song}** has been removed from your favorites.", colors.pink)
+                await send_notif(
+                    ctx,
+                    Responses.music_player_fav_rm.format(
+                        title=song
+                    )
+                )
             else:
                 playlist = playlist + f"{song}\n"
 
@@ -490,12 +669,18 @@ class Voice(commands.Cog):
             embed.set_footer(text=f"Use `{pf}unfave <id>` to remove an item from your favorites.")
             await ctx.send(embed=embed)
         except FileNotFoundError:
-            await send_basic_response(ctx, "It seems that you haven't added any song to your favorites yet.", colors.red)   
+            await send_error_message(
+                ctx,
+                Responses.music_player_no_fav
+            )   
 
     @commands.command(aliases=['playfaves', 'pl', 'pf'])
     async def playliked(self, ctx, number=None):
         if not ctx.author.voice:
-            await send_basic_response(ctx, "Please connect to a voice channel first.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.user_no_voice
+            )
             return
 
         if not ctx.voice_client:
@@ -507,7 +692,12 @@ class Voice(commands.Cog):
             player = self.music.create_player(ctx, "nowplaying")
 
         if ctx.channel != player.get_channel():
-            await send_basic_response(ctx, f"The player can only be controlled from **[{player.get_channel().name}]**.", colors.red)
+            await send_error_message(
+                ctx,
+                Responses.music_wrong_channel.format(
+                    channel_name=player.get_channel().name
+                )
+            )
             return
 
         with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as f:
@@ -517,7 +707,10 @@ class Voice(commands.Cog):
             try:
                 number = int(number) - 1
             except:
-                await send_basic_response(ctx, "Invalid song ID.", colors.red)
+                await send_error_message(
+                    ctx,
+                    Responses.msuic_player_fav_invalid
+                )
                 return
 
             await player.play(songs[number])
@@ -552,8 +745,6 @@ class Voice(commands.Cog):
                 description=desc
             ), view=player_controls(ctx)
         )
-
-    # TODO: pause, resume
 
 async def setup(client):
     await client.add_cog(Voice(client))

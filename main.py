@@ -19,6 +19,12 @@ from core.logger import console_log
 from core.prefix import prefix
 from cogs.admin import Database
 
+# VERSION INFO
+PROJECT_NAME: str = "Yae Miko - Discord Bot [discord.py]"
+VERSION: str = "1.1.0"
+AUTHOR: str = "cxrvxxxx"
+REPO_URL: str = "https://github.com/cxrvxxxx/yae-miko"
+
 # load and read token from .env
 load_dotenv()
 token = os.getenv('TOKEN')

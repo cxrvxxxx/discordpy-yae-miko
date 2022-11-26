@@ -1,58 +1,72 @@
-import asyncio
-from typing import Union
-
+"""
+A module for handling pre-formatted messages
+"""
+from typing import Optional, Union
 import discord
 from discord.ext import commands
-from discord.ui import View
+from core import colors
 
-class MessageManager:
-    __channel: discord.TextChannel
-    __last_message: discord.Message
-    __current: discord.Message
-    ctx: commands.Context
+async def send_basic_response(
+    ctx: commands.Context,
+    message: discord.Message,
+    color: discord.Color,
+    delete_after: Optional[Union[int, None]] = None
+) -> discord.Message:
+    """
+    Send an embed-only message
+    """
+    return await ctx.send(
+        embed = discord.Embed(
+            description = message,
+            colour = color
+        ),
+        delete_after = delete_after
+    )
 
-    def __init__(self, ctx, channel: discord.TextChannel) -> None:
-        self.__channel = channel
-        self.__last_message = None
-        self.__current = None
-        self.ctx = ctx
+async def send_error_message(
+    ctx: commands.Context,
+    message: discord.Message
+) -> discord.Message:
+    """Error message, self-destructs after 10 seconds"""
+    return await ctx.send(
+        embed=discord.Embed(
+            description=message,
+            colour=colors.red
+        ),
+        delete_after=10
+    )
 
-    @property
-    def channel(self) -> discord.TextChannel:
-        return self.__channel
+async def send_notif(
+    ctx: commands.Context,
+    message: discord.Message
+) -> discord.Message:
+    """Notification message, self-destructs after 10 seconds"""
+    return await ctx.send(
+        embed=discord.Embed(
+            description=message,
+            colour=colors.pink
+        ),
+        delete_after=10
+    )
 
-    async def send_message(self, content: str = None, embed: discord.Embed=None, view: View=None, delete_after: bool = None) -> None:
-        self.__current = await self.ctx.send(
-            content=content,
-            embed=embed,
-            view=view,
-            delete_after=delete_after
-        )
-
-    async def update(self, content: str = None, embed: discord.Embed=None, view: View=None) -> None:
-        self.__last_message = self.__current
-        self._current = await self.__current.edit(
-            content=content,
-            embed=embed,
-            view=view,
-        )
-
-    async def notify(self, content: str = None, embed: discord.Embed=None, view: View=None, delete_after: bool = None) -> None:
-        self.__last_message = self.__current
-        self.__current = await self._current.edit(
-            content=content,
-            embed=embed,
-            view=view,
-        )
-
-        self.__restore_after(delete_after)
-
-    async def __restore_after(self, time: Union[int, float]) -> None:
-        asyncio.sleep(time)
-        temp = self.__current
-        self.__current = await self.__current.edit(
-            content=self.__last_message.content,
-            embeds=self.__last_message.embeds,
-            view=self.__last_message.view,
-        )
-        self.__last_message = temp
+class Responses:
+    # TODO: dynamically assign these from file
+    bot_disconnect: str = "Disconnecting from voice since no one else is in the channel."
+    bot_is_connected: str = "Already connected to voice channel **[{channel_name}]**."
+    bot_not_connected: str = "Not connected to a **voice channel**."
+    bot_on_connect: str = "Connected to **[{vc_name}]** and bound to **[{channel_name}]**."
+    music_empty_queue:str =  "The queue is **empty**."
+    music_no_pause: str = "Cannot pause because nothing is playing."
+    music_no_player: str = "There is no **active player**."
+    music_no_previous: str = "Cannot play previous song."
+    music_no_resume: str = "Cannot resume because nothing is playing."
+    music_no_skip: str = "Cannot skip because the queue is empty."
+    music_player_fav_add: str = "Added **{title}** to your favorites."
+    msuic_player_fav_invalid: str = "Invalid song ID."
+    music_player_fav_rm: str = "**{title}** has been removed from your favorites."
+    music_player_no_fav: str = "It seems that you haven't added any song to your favorites yet."
+    music_player_no_song: str = "There is no **song** currently playing."
+    music_player_volume: str = "Player volume: **{volume}%**."
+    music_player_volume_invalid: str = "The volume must be between **0** to **100**."
+    music_wrong_channel: str = "The player can only be controlled from **[{channel_name}]**."
+    user_no_voice: str = "You are not connected to a **voice channel**."

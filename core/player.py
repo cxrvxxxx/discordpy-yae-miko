@@ -290,7 +290,6 @@ class Player:
 
     def play_song(self, silent: Optional[bool] = False) -> None:
         """Handles audio streaming to Discord"""
-        self.__is_playing = False
         try:
             self.__last_song = self.__now_playing
             self.__now_playing = self.__queue.pop(0)
@@ -302,20 +301,24 @@ class Player:
                 volume = self.__volume
             )
 
-            while not self.__is_playing:
+            while True:
                 self.__ctx.voice_client.play(source, after = lambda error: self.play_song())
 
                 if self.__ctx.voice_client.is_playing():
-                    self.__is_playing = True
+                    break
+
+            self.__is_playing = True
 
             if self.__on_play and not silent:
                 on_play = self.__ctx.bot.get_command(self.__on_play)
 
                 if on_play:
                     self.__loop.create_task(self.__ctx.invoke(on_play))
-        except IndexError:
+        except IndexError: # Expected error when there are no more tracks in queue
             self.__now_playing = None
             self.__is_playing = False
+
+            # Remove controls from latest "now playing" message
             if self.last_np_msg:
                 self.__loop.create_task(
                     self.last_np_msg.edit(

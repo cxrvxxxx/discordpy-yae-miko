@@ -22,7 +22,7 @@ class PauseButton(Button):
         self.ctx = ctx
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.ctx.invoke(self.ctx.bot.get_command("pause"))
+        await self.ctx.invoke(self.ctx.bot.get_command("pause"), normal=False)
         await interaction.message.edit(view=player_controls(self.ctx, paused = True))
         await interaction.response.defer()
 
@@ -34,7 +34,8 @@ class PrevButton(Button):
         self.ctx = ctx
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.ctx.invoke(self.ctx.bot.get_command("prev"))
+        await self.ctx.invoke(self.ctx.bot.get_command("prev"), normal=False)
+        await interaction.response.defer()
 
 class NextButton(Button):
     def __init__(self, ctx, freeze: bool = False):
@@ -43,7 +44,7 @@ class NextButton(Button):
         self.ctx = ctx
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.ctx.invoke(self.ctx.bot.get_command("skip"))
+        await self.ctx.invoke(self.ctx.bot.get_command("skip"), normal=False)
         await interaction.message.edit(view=None)
 
 class StopButton(Button):

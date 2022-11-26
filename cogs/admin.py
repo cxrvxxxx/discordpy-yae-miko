@@ -1,19 +1,17 @@
 import discord
 import sqlite3
 import os
+from typing import Optional, Union
 
 from discord.ext import commands
 from core.logger import console_log
 from core.prefix import prefix
 from core import colors
+from core.message import send_basic_response
 
 # create data directory if non existent
 if not os.path.exists('data'):
     os.mkdir('data')
-
-# send basic embed without title
-async def send_basic_response(ctx, message, color):
-    return await ctx.send(embed = discord.Embed(description = message, colour = color))
 
 class Admin(commands.Cog):
     def __init__(self, client):
