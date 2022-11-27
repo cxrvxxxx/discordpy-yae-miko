@@ -10,6 +10,7 @@ from typing import Dict
 
 # Third-party libraries
 import discord
+from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -75,7 +76,7 @@ class YaeMiko(commands.Bot):
                 await self.load_extension(f"cogs.{filename[:-3]}")
 
         # Syncing application commands
-        synced = await self.tree.sync(guild=discord.Object(id=907119292410130433))
+        synced = await self.tree.sync()
         logger.info(f"Synced {len(synced)} command(s).")
 
     async def on_ready(self) -> None:
