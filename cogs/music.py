@@ -1,12 +1,27 @@
+"""
+Music Cog
+
+Commands
+----------
+
+"""
+# Standard imports
 import os
 import asyncio
+
+# Third-party library imports
 import discord
 from discord.ext import commands
+
+# Core imports
+import logsettings
 from core import colors
 from core.player import Music
-from core.logger import console_log
 from core.ui import player_controls
 from core.message import *
+
+# Logger
+logger = logsettings.logging.getLogger("musicplayer")
 
 # default config values
 settings = {
@@ -18,53 +33,72 @@ if not os.path.exists('playlists'):
     os.mkdir('playlists')
 
 class Voice(commands.Cog):
-    def __init__(self, client):
+    def __init__(self, client: commands.Bot) -> None:
         self.client = client
-        self.music = Music()
+        self.music  = Music()
         self.config = client.config
 
+    async def auto_disconnect(
+        self,
+        member  : discord.Member,
+        before  : discord.VoiceState,
+        after   : discord.VoiceState
+    ) -> None:
+        """Handles automatic disconnection of the bot from voice"""
+        # Ignore if update comes from bot
+        if member == self.client.user:
+            return
+
+        # Checking if auto-disconnect is enabled
+        feature_enabled = self.config[member.guild.id].getboolean(__name__, 'voice_auto_disconnect')
+        if not before and after and not feature_enabled:
+            return
+
+        guild = self.client.get_guild(member.guild.id)
+        # Ignore if the bost is not connected
+        if not guild.voice_client:
+            return
+
+        logger.debug(f"Started auto-disconnect timer in guild: ({guild.id}).")
+        # Delay before the bot disconnects
+        await asyncio.sleep(10)
+
+        user_count = len(guild.voice_client.channel.members)
+        if user_count < 2:
+            player = self.music.get_player(guild.id)
+            channel = player.get_channel()
+
+            if player:
+                self.music.close_player(guild.id)
+                await send_notif(channel, Responses.bot_disconnect)
+
+            await guild.voice_client.disconnect()
+            logger.debug(f"Disconnected from voice in guild: ({guild.id})")
+        else:
+            logger.debug(f"Finished timer in guild: ({guild.id}), aborting auto-disconnect")
+
     @commands.Cog.listener()
-    async def on_ready(self):
-        # init config data for this cog
+    async def on_ready(self) -> None:
+        """Cog set-up function when added to client"""
+        # Save { settings } to file
         for guild in self.client.guilds:
             for key, value in settings.items():
                 if not self.config[guild.id].get(__name__, key):
                     self.config[guild.id].set(__name__, key, value)
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        # auto disconnect
-        if member == self.client.user:
-            return
-
-        autodc_enabled = self.config[member.guild.id].getboolean(__name__, 'voice_auto_disconnect')
-        if not before and after and not autodc_enabled:
-            return
-        
-        guild = self.client.get_guild(member.guild.id)
-
-        if not guild.voice_client:
-            return
-
-        console_log("Auto-disconnect timer started.")
-        await asyncio.sleep(10)
-
-        # redundancy check in case the bot already disconnected
-        if not guild.voice_client:
-            return
-
-        if len(guild.voice_client.channel.members) < 2:
-            # unbind channel and clear player
-            channel = self.music.get_player(guild.id).get_channel()
-            self.music.close_player(guild.id)
-        
-            await send_notif(channel, Responses.bot_disconnect)
-            await guild.voice_client.disconnect()
-        else:
-            console_log("Auto-disconnect timer ended. There are users in the channel.")
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState
+    ) -> None:
+        """Called when a user updates their voice state"""
+        await self.auto_disconnect(member, before, after)
 
     @commands.command()
-    async def join(self, ctx):
+    async def join(self, ctx: commands.Context) -> None:
+        """Make the bot join the user's voice channel"""
         if not ctx.author.voice:
             await send_error_message(
                 ctx,
@@ -83,7 +117,8 @@ class Voice(commands.Cog):
         await ctx.author.voice.channel.connect()
 
     @commands.command(aliases=['p'])
-    async def play(self, ctx, *, query):
+    async def play(self, ctx: commands.Context, *, query: str) -> None:
+        """Plays a song from specified query"""
         try:
             await ctx.message.delete()
         except Exception as e:
@@ -136,7 +171,8 @@ class Voice(commands.Cog):
             await ctx.send(embed=embed, delete_after=10)
 
     @commands.command(aliases=['np'])
-    async def nowplaying(self, ctx):
+    async def nowplaying(self, ctx: commands.Context) -> None:
+        """Displays the currently playing song/track"""
         pf = self.client.prefix(self.client, ctx.message)
 
         player = self.music.get_player(ctx.guild.id)
@@ -178,14 +214,17 @@ class Voice(commands.Cog):
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
-        embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
+        embed.set_footer(
+            text=f"If you like this song, use '{pf}fave' to add this to your favorites!"
+        )
         if player.last_np_msg:
             await player.last_np_msg.delete()
 
         player.last_np_msg = await ctx.send(embed=embed, view=player_controls(ctx))
 
     @commands.command(aliases=['q'])
-    async def queue(self, ctx):
+    async def queue(self, ctx: commands.Context) -> None:
+        """Displays the list of queued songs/tracks"""
         await ctx.message.delete()
         pf = self.client.prefix(self.client, ctx.message)
 
@@ -257,7 +296,8 @@ class Voice(commands.Cog):
         await ctx.send(embed=embed, delete_after=10)
 
     @commands.command(aliases=['rm'])
-    async def remove(self, ctx, index):
+    async def remove(self, ctx: commands.Context, index: int) -> None:
+        """Removes a song/track from the queue"""
         pf = self.client.prefix(self.client, ctx.message)
 
         player = self.music.get_player(ctx.guild.id)
@@ -322,7 +362,8 @@ class Voice(commands.Cog):
         await ctx.message.delete()
 
     @commands.command()
-    async def prev(self, ctx, normal: bool = True):
+    async def prev(self, ctx: commands.Context, normal: bool = True) -> None:
+        """Plays the previous song/track in the queue"""
         if not ctx.author.voice:
             await send_error_message(
                 ctx,
@@ -371,7 +412,8 @@ class Voice(commands.Cog):
         await ctx.message.delete()
 
     @commands.command()
-    async def skip(self, ctx, normal: bool = True):
+    async def skip(self, ctx: commands.Context, normal: bool = True) -> None:
+        """Plays the next song/track in the queue"""
         if not ctx.author.voice:
             await send_error_message(
                 ctx,
@@ -420,7 +462,8 @@ class Voice(commands.Cog):
         await ctx.message.delete()
 
     @commands.command()
-    async def pause(self, ctx, normal: bool = True):
+    async def pause(self, ctx: commands.Context, normal: bool = True) -> None:
+        """Pause playback of the current song/track"""
         if not ctx.author.voice:
             await send_error_message(
                 ctx,
@@ -469,7 +512,8 @@ class Voice(commands.Cog):
         await ctx.message.delete()
 
     @commands.command()
-    async def resume(self, ctx, normal: bool = True):
+    async def resume(self, ctx: commands.Context, normal: bool = True) -> None:
+        """Resume playback of current song/track"""
         if not ctx.author.voice:
             await send_error_message(
                 ctx,
@@ -518,7 +562,8 @@ class Voice(commands.Cog):
         await ctx.message.delete()
 
     @commands.command(aliases=['disconnect', 'dc'])
-    async def leave(self, ctx):
+    async def leave(self, ctx: commands.Context) -> None:
+        """Makes the bot disconnect from the user's voice channel"""
         if not ctx.voice_client:
             await send_error_message(
                 ctx,
@@ -549,7 +594,8 @@ class Voice(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=['v', 'vol'])
-    async def volume(self, ctx, vol = None):
+    async def volume(self, ctx: commands.Context, vol = None) -> None:
+        """Sets the volume of the player"""
         player = self.music.get_player(ctx.guild.id)
 
         if not vol:
@@ -603,7 +649,8 @@ class Voice(commands.Cog):
         await ctx.send(embed=embed, delete_after=10)
 
     @commands.command()
-    async def fave(self, ctx):
+    async def fave(self, ctx: commands.Context) -> None:
+        """Add currently playing song/track to favorites"""
         player = self.music.get_player(ctx.guild.id)
         if not player:
             await send_error_message(
@@ -631,7 +678,8 @@ class Voice(commands.Cog):
         )
 
     @commands.command()
-    async def unfave(self, ctx, i: int):
+    async def unfave(self, ctx: commands.Context, i: int) -> None:
+        """Removes the specified song from favorites"""
         i = i - 1
         with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as f:
             songs = f.read().splitlines()
@@ -652,7 +700,8 @@ class Voice(commands.Cog):
             a.write(playlist)
 
     @commands.command(aliases=['faves', 'favelist', 'favlist'])
-    async def favorites(self, ctx):
+    async def favorites(self, ctx: commands.Context) -> None:
+        """Display a list of songs/tracks added to favorites"""
         pf = self.client.prefix(self.client, ctx.message)
 
         try:
@@ -675,7 +724,8 @@ class Voice(commands.Cog):
             )   
 
     @commands.command(aliases=['playfaves', 'pl', 'pf'])
-    async def playliked(self, ctx, number=None):
+    async def playliked(self, ctx: commands.Context, number=None):
+        """Plays song(s, if specified) from favorites"""
         if not ctx.author.voice:
             await send_error_message(
                 ctx,
@@ -741,10 +791,11 @@ class Voice(commands.Cog):
         await msg.edit(
             embed=discord.Embed(
                 colour=colors.pink,
-                title=f"❤️ Playing songs that you like",
+                title="❤️ Playing songs that you like",
                 description=desc
             ), view=player_controls(ctx)
         )
 
-async def setup(client):
+async def setup(client: commands.Bot) -> None:
+    """Adds the cog to the client"""
     await client.add_cog(Voice(client))

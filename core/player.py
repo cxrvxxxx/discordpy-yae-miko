@@ -403,6 +403,7 @@ class Player:
         if self.__is_playing:
             self.__now_playing = None
             self.__queue.clear()
+            logger.debug(f"Cleared queue (ID: {self.__ctx.guild.id})")
             self.__ctx.voice_client.stop()
             logger.debug(f"Stopped playback (ID: {self.__ctx.guild.id})")
 
