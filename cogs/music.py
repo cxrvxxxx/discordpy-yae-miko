@@ -18,7 +18,7 @@ import logsettings
 from core import colors
 from core.player import Music
 from core.ui import player_controls
-from core.message import *
+from core.message import send_error_message, send_notif, Responses
 
 # Logger
 logger = logsettings.logging.getLogger("musicplayer")
@@ -33,6 +33,7 @@ if not os.path.exists('playlists'):
     os.mkdir('playlists')
 
 class Voice(commands.Cog):
+    """Command class"""
     def __init__(self, client: commands.Bot) -> None:
         self.client = client
         self.music  = Music()
@@ -121,8 +122,8 @@ class Voice(commands.Cog):
         """Plays a song from specified query"""
         try:
             await ctx.message.delete()
-        except Exception as e:
-            print(e)
+        except discord.NotFound as err:
+            logger.debug(err)
 
         if not ctx.author.voice:
             await send_error_message(
@@ -173,7 +174,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['np'])
     async def nowplaying(self, ctx: commands.Context) -> None:
         """Displays the currently playing song/track"""
-        pf = self.client.prefix(self.client, ctx.message)
+        pref = self.client.prefix(self.client, ctx.message)
 
         player = self.music.get_player(ctx.guild.id)
 
@@ -215,7 +216,7 @@ class Voice(commands.Cog):
             )
 
         embed.set_footer(
-            text=f"If you like this song, use '{pf}fave' to add this to your favorites!"
+            text=f"If you like this song, use '{pref}fave' to add this to your favorites!"
         )
         if player.last_np_msg:
             await player.last_np_msg.delete()
@@ -226,7 +227,7 @@ class Voice(commands.Cog):
     async def queue(self, ctx: commands.Context) -> None:
         """Displays the list of queued songs/tracks"""
         await ctx.message.delete()
-        pf = self.client.prefix(self.client, ctx.message)
+        pref = self.client.prefix(self.client, ctx.message)
 
         player = self.music.get_player(ctx.guild.id)
 
@@ -292,13 +293,15 @@ class Voice(commands.Cog):
             inline=False
         )
 
-        embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
+        embed.set_footer(
+            text=f"If you like this song, use '{pref}fave' to add this to your favorites!"
+        )
         await ctx.send(embed=embed, delete_after=10)
 
     @commands.command(aliases=['rm'])
     async def remove(self, ctx: commands.Context, index: int) -> None:
         """Removes a song/track from the queue"""
-        pf = self.client.prefix(self.client, ctx.message)
+        pref = self.client.prefix(self.client, ctx.message)
 
         player = self.music.get_player(ctx.guild.id)
 
@@ -330,7 +333,7 @@ class Voice(commands.Cog):
 
         embed = discord.Embed(
             colour=colors.pink,
-            description=f"Song removed from queue."
+            description="Song removed from queue."
         )
         embed.set_thumbnail(
             url=song.get_thumbnail()
@@ -344,11 +347,11 @@ class Voice(commands.Cog):
         if len(queue) <= 1:
             songs = "There are no songs in the queue."
         else:
-            for index, song in enumerate(queue):
-                if index == 0:
+            for idx, song in enumerate(queue):
+                if idx == 0:
                     pass
                 else:
-                    songs = songs + f"\n `{index}` {song.get_title()}"
+                    songs = songs + f"\n `{idx}` {song.get_title()}"
 
         embed.add_field(
             name="🎶 Up Next...",
@@ -356,7 +359,9 @@ class Voice(commands.Cog):
             inline=False
         )
 
-        embed.set_footer(text=f"If you like this song, use '{pf}fave' to add this to your favorites!")
+        embed.set_footer(
+            text=f"If you like this song, use '{pref}fave' to add this to your favorites!"
+        )
         await ctx.send(embed=embed, delete_after=10)
 
         await ctx.message.delete()
@@ -587,8 +592,9 @@ class Voice(commands.Cog):
 
         embed = discord.Embed(
             colour=colors.pink,
-            description=f"Disconnected from **[{ctx.voice_client.channel.name}]** and unbound from **[{player.get_channel().name if player else 'channel'}]**."
-        )        
+            description=f"Disconnected from **[{ctx.voice_client.channel.name}]** and \
+                        unbound from **[{player.get_channel().name if player else 'channel'}]**."
+        )
 
         await ctx.voice_client.disconnect()
         await ctx.send(embed=embed)
@@ -631,7 +637,6 @@ class Voice(commands.Cog):
             )
             return
 
-        
         if not player:
             await send_error_message(
                 ctx,
@@ -667,8 +672,8 @@ class Voice(commands.Cog):
             )
             return
 
-        with open(f"playlists/{ctx.author.id}.txt", 'a', encoding="utf8") as f:
-            f.write(f"{song.get_title()}\n")
+        with open(f"playlists/{ctx.author.id}.txt", 'a', encoding="utf8") as file:
+            file.write(f"{song.get_title()}\n")
 
         await send_notif(
             ctx,
@@ -681,8 +686,8 @@ class Voice(commands.Cog):
     async def unfave(self, ctx: commands.Context, i: int) -> None:
         """Removes the specified song from favorites"""
         i = i - 1
-        with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as f:
-            songs = f.read().splitlines()
+        with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as file:
+            songs = file.read().splitlines()
 
         playlist = ""
         for index, song in enumerate(songs):
@@ -696,17 +701,17 @@ class Voice(commands.Cog):
             else:
                 playlist = playlist + f"{song}\n"
 
-        with open(f"playlists/{ctx.author.id}.txt", 'w', encoding="utf8") as a:
-            a.write(playlist)
+        with open(f"playlists/{ctx.author.id}.txt", 'w', encoding="utf8") as file:
+            file.write(playlist)
 
     @commands.command(aliases=['faves', 'favelist', 'favlist'])
     async def favorites(self, ctx: commands.Context) -> None:
         """Display a list of songs/tracks added to favorites"""
-        pf = self.client.prefix(self.client, ctx.message)
+        pref = self.client.prefix(self.client, ctx.message)
 
         try:
-            with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as f:
-                songs = f.read().splitlines()
+            with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as file:
+                songs = file.read().splitlines()
 
             playlist = ""
             for index, song in enumerate(songs, start=1):
@@ -715,15 +720,15 @@ class Voice(commands.Cog):
             playlist = "None" if playlist == "" else playlist
 
             embed = discord.Embed(colour=colors.pink, title="❤️ Liked Songs", description=playlist)
-            embed.set_footer(text=f"Use `{pf}unfave <id>` to remove an item from your favorites.")
+            embed.set_footer(text=f"Use `{pref}unfave <id>` to remove an item from your favorites.")
             await ctx.send(embed=embed)
         except FileNotFoundError:
             await send_error_message(
                 ctx,
                 Responses.music_player_no_fav
-            )   
+            )
 
-    @commands.command(aliases=['playfaves', 'pl', 'pf'])
+    @commands.command(aliases=['playfaves', 'pl', 'pref'])
     async def playliked(self, ctx: commands.Context, number=None):
         """Plays song(s, if specified) from favorites"""
         if not ctx.author.voice:
@@ -750,13 +755,14 @@ class Voice(commands.Cog):
             )
             return
 
-        with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as f:
-            songs = f.read().splitlines()
+        with open(f"playlists/{ctx.author.id}.txt", 'r', encoding="utf8") as file:
+            songs = file.read().splitlines()
 
         if number:
             try:
                 number = int(number) - 1
-            except:
+            except ValueError:
+                logger.debug(f"Failed to convert {number} to integer type")
                 await send_error_message(
                     ctx,
                     Responses.msuic_player_fav_invalid
@@ -778,7 +784,7 @@ class Voice(commands.Cog):
         desc = ""
         for index, song in enumerate(songs, start=1):
             desc += f"`{index}` {song}\n"
-            
+
             await msg.edit(
                 embed=discord.Embed(
                     colour=colors.pink,
