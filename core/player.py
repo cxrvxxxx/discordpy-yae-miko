@@ -3,13 +3,16 @@ Music Player
     - Provides an easy way to stream audio to discord
       from a song title or a youtube link.
 """
+# Standard imports
 from typing import List, Dict, ClassVar, Optional, Any, Union
-
-import aiohttp
 import asyncio
+
+# Third party-library imports
+import aiohttp
 import youtube_dl
 import discord
 
+# Core imports
 import logsettings
 from core import colors
 from cogs.admin import send_basic_response
@@ -193,6 +196,7 @@ class Player:
 
     @property
     def is_playing(self) -> bool:
+        """Check if player state is playing"""
         return self.__is_playing
 
     @property
@@ -202,6 +206,7 @@ class Player:
 
     @property
     def last_song(self) -> Song:
+        """Returns the song that was played previously"""
         return self.__last_song
 
     def set_volume(self, volume: int) -> float:
@@ -340,7 +345,11 @@ class Player:
 
         return self.__now_playing
 
-    async def play(self, query: str, silent: Optional[bool] = False) -> Dict[str, Union[bool, Song]]:
+    async def play(
+        self,
+        query: str,
+        silent: Optional[bool] = False
+    ) -> Dict[str, Union[bool, Song]]:
         """Entry point for playing audio"""
         for i in range(1, 3 + 1):
             song = await self.fetch_track(query)
@@ -379,10 +388,11 @@ class Player:
             self.__last_song = None
             self.__ctx.voice_client.stop()
             logger.debug(f"Skipped to previous track (ID: {self.__ctx.guild.id})")
-            
+
             return self.__now_playing
 
     async def pause(self) -> Union[Song, None]:
+        """Pauses playback of current song"""
         if self.__is_playing:
             self.__is_playing = False
             self.__ctx.voice_client.pause()
@@ -391,6 +401,7 @@ class Player:
             return self.now_playing
 
     async def resume(self) -> Union[Song, None]:
+        """Resumes playback of current song"""
         if not self.__is_playing:
             self.__is_playing = True
             self.__ctx.voice_client.resume()
@@ -403,6 +414,7 @@ class Player:
         if self.__is_playing:
             self.__now_playing = None
             self.__queue.clear()
+            logger.debug(f"Cleared queue (ID: {self.__ctx.guild.id})")
             self.__ctx.voice_client.stop()
             logger.debug(f"Stopped playback (ID: {self.__ctx.guild.id})")
 
