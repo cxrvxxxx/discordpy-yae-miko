@@ -20,7 +20,7 @@ import logsettings
 
 # Version information
 PROJECT_NAME:   str = "Yae Miko - Discord Bot [discord.py]"
-VERSION:        str = "1.2.2"
+VERSION:        str = "1.2.3"
 AUTHOR:         str = "cxrvxxxx"
 REPO_URL:       str = "https://github.com/cxrvxxxx/yae-miko"
 
