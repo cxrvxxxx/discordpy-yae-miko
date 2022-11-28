@@ -15,7 +15,7 @@ import discord
 # Core imports
 import logsettings
 from core import colors
-from cogs.admin import send_basic_response
+from core.message import send_basic_response
 
 # Logger
 logger = logsettings.logging.getLogger("musicplayer")

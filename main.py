@@ -20,7 +20,7 @@ import logsettings
 
 # Version information
 PROJECT_NAME:   str = "Yae Miko - Discord Bot [discord.py]"
-VERSION:        str = "1.2.3"
+VERSION:        str = "1.3.3"
 AUTHOR:         str = "cxrvxxxx"
 REPO_URL:       str = "https://github.com/cxrvxxxx/yae-miko"
 
@@ -74,9 +74,9 @@ class YaeMiko(commands.Bot):
                 # cut off the .py from the file name
                 await self.load_extension(f"cogs.{filename[:-3]}")
 
-        # Syncing application commands
-        synced = await self.tree.sync()
-        logger.info(f"Synced {len(synced)} command(s).")
+        # FIXME: Syncing application commands must be moved to command
+        # synced = await self.tree.sync(guild=discord.Object(id="907119292410130433"))
+        # logger.info(f"Synced {len(synced)} command(s).")
 
     async def on_ready(self) -> None:
         """Called when the bot has finished loading"""

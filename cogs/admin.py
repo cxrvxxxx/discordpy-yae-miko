@@ -1,210 +1,175 @@
+"""
+A module for administrative commands
+"""
+# Standard imports
+from typing import Optional
+
+# Third-party library imports
 import discord
-import sqlite3
-import os
-from typing import Optional, Union
-
 from discord.ext import commands
-from core.logger import console_log
-from core.prefix import prefix
-from core import colors
-from core.message import *
 
-# create data directory if non existent
-if not os.path.exists('data'):
-    os.mkdir('data')
+# Core imports
+import logsettings
+from core.model import Database
+from core.message import send_error_message, send_notif
+
+# Logger
+logger = logsettings.logging.getLogger("bot.admin")
+
+# TODO: Dynamically assign this from file
+levels = {
+    "echo"          : 3,
+    "restart"       : 5,
+    "setprefix"     : 3,
+    "yaechannel"    : 3,
+}
 
 class Admin(commands.Cog):
-    def __init__(self, client):
+    """
+    Administrative commands class
+    """
+    def __init__(self, client: commands.Bot) -> None:
+        """Class constructor"""
         self.client = client
         self.config = client.config
 
-    # @commands.Cog.listener()
-    # async def on_message(self, message):
-    #     pf = prefix(self.client, message)
-    #     if message.author == self.client.user:
-    #         return
+    async def validate(self, message: discord.Message) -> None:
+        """Validates messages if 'yaechannel' is set"""
+        # Checking for validity of the command
+        ctx = await self.client.get_context(message)
+        if not ctx.command or ctx.command_failed:
+            return
 
-    #     ctx = await self.client.get_context(message)
-    #     if ctx:
-    #         if ctx.command and not ctx.command_failed:
-    #             console_log(ascii(f"{ctx.guild.name}/{ctx.channel.name}/{ctx.author.nick if ctx.author.nick else ctx.author.name}: {ctx.message.content}"))
+        # Checking if the command is invoked in 'yaechannel'
+        config = self.config.get(ctx.guild.id)
+        if config.getint(__name__, 'yae_channel') != ctx.channel.id:
+            return
 
-    #         # delete non yae command messages in yae channel
-    #         config = self.config.get(ctx.guild.id)
-    #         if config.getint(__name__, 'yae_channel') == ctx.channel.id:
-    #             ctx = await self.client.get_context(message)
-    #             if not message.content.startswith(pf) or not ctx.command:
-    #                 await message.delete()
-    #                 await ctx.send(embed = discord.Embed(description = f"Invalid command: '{message.content}'.\n\n**Invalid commands will be deleted in this channel.**", colour = colors.pink), delete_after=10)
+        # Checking if the command starts with the prefix
+        pref = self.client.prefix(self.client, message)
+        if message.content.startswith(pref):
+            logger.debug(f"Command {ctx.command.name} invoked in {ctx.guild.id}")
+            return
+
+        await message.delete()
+        await send_error_message(
+            ctx, f"Invalid command: '{message.content}'.\n\n**Invalid commands will be deleted in this channel.**"
+        )
+
+    async def has_access(self, ctx: commands.Context, level: int) -> bool:
+        """Check if a user has required access level"""
+        flag: bool = True if Database(ctx.guild.id).get_access(ctx.author.id) >= level else False
+
+        if not flag:
+            await send_error_message(
+                ctx, f"You must have at least access level **{level}** to use this command."
+            )
+
+        return flag
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        """Called whenever a message is sent"""
+        # Ignore if message comes from bot
+        if message.author == self.client.user:
+            return
+
+        await self.validate(message)
 
     @commands.command()
-    async def setprefix(self, ctx, *, pref) -> None:
+    async def setprefix(self, ctx: commands.Context, *, pref: Optional[str] = "y!") -> None:
         """Sets the bot prefix per guild"""
-        model = Database(ctx.guild.id)
-
-        if model.get_access(ctx.author.id) < 3:
-            await ctx.send(
-                embed = discord.Embed(
-                    description = "You must have at least access level 3 to use this command.",
-                    colour = colors.red
-                )
-            )
+        if not await self.has_access(ctx, levels['setprefix']):
             return
 
         config = self.client.config[ctx.guild.id]
-
         config.set('main', 'prefix', pref)
 
-        await ctx.send(
-            embed = discord.Embed(
-                description = f"Server prefix has been set to **[{pref}]**.",
-                colour = colors.pink
-            )
+        await send_notif(
+            ctx, f"Server prefix has been set to **[{pref}]**."
         )
 
     @commands.command()
-    async def yaechannel(self, ctx, arg=None):
+    async def yaechannel(self, ctx: commands.Context, arg: bool = True) -> None:
+        if not await self.has_access(ctx, levels['yaechannel']):
+            return
+
         config = self.config.get(ctx.guild.id)
 
-        if arg == 'disable':
+        if not arg:
             config.delete(__name__, 'yae_channel')
+            logger.debug(f"Disabled command checking for guild: {ctx.guild.id}")
+            await send_notif(
+                ctx, "This channel can now be used **freely**."
+            )
         else:
             config.set(__name__, 'yae_channel', f"{ctx.channel.id}")
-            await send_basic_response(ctx, "This channel can now only be used for **Yae Miko commands**.", colors.pink)
+            await send_notif(
+                ctx, "This channel can now only be used for **Yae Miko commands**."
+            )
+            logger.debug(f"Enabled command checking in channel: {ctx.channel.id} for guild: {ctx.guild.id}")
 
-    # set a user's access level, 0 means the user will be removed from the database
     @commands.command(aliases=["sa"])
-    async def setaccess(self, ctx, member: discord.Member, access):
+    async def setaccess(self, ctx: commands.Context, member: discord.Member, access: int = 0) -> None:
+        """Modify access level of specified user"""
         db = Database(ctx.guild.id)
 
-        if db.get_access(ctx.author.id) <= db.get_access(member.id) or ctx.author == member:
-            await send_basic_response(ctx, "You cannot change the access level for this user.", colors.red)
+        if db.compare_access(ctx.author.id, member.id) == member.id or ctx.author == member:
+            await send_error_message(
+                ctx, "You cannot change the access level for this user."
+            )
             return
         
         if access == 0:
             db.delete_user(member.id)
-            await send_basic_response(ctx, f"Removed access for {member.nick if member.nick else member.name}.", colors.pink)
+            await send_notif(
+                ctx, f"Removed access for {member.nick if member.nick else member.name}."
+            )
+            logger.debug(f"Removed access for user: {member.id} in guild: {ctx.guild.id}")
             return
             
         db.update(member.id, access)
-        await send_basic_response(ctx, f"Set **{member.nick if member.nick else member.name}'s** access to {access}", colors.pink)
+        await send_notif(
+            ctx, f"Set **{member.nick if member.nick else member.name}'s** access to {access}"
+        )
 
-    # owner command only, skips the check and grants maximum access
     @commands.command()
-    async def sudo(self, ctx):
-        db = Database(ctx.guild.id)
-
+    async def sudo(self, ctx: commands.Context) -> None:
+        """Gives bot owner highest access level (for debugging)"""
         if ctx.author.id != 200034086444597248:
-            await send_basic_response(ctx, "Only the bot owner is authorized to use this command.")
+            await send_error_message(
+                ctx, "Only the bot owner is authorized to use this command."
+            )
             return
 
+        db = Database(ctx.guild.id)
         db.update(200034086444597248, 5)
 
-        await send_basic_response(ctx, "You have been given the maximum access level.", colors.pink)
+        await send_notif(
+            ctx, "You have been given the maximum access level.",
+        )
 
     # restart the bot
     @commands.command(aliases=["r"])
-    async def restart(self, ctx):
-        db = Database(ctx.guild.id)
-        required_access = 5 # set access level for this command
-        
-        if db.get_access(ctx.author.id) < required_access:
-            await send_basic_response(ctx, "You must have at least access level 5 to execute this command.", colors.red)
+    async def restart(self, ctx: commands.Context) -> None:
+        """Restarts the bot"""
+        if not await self.has_access(ctx, levels["restart"]):
             return
 
-        await send_basic_response(ctx, f"The **restart** command has been issued by **{ctx.author.nick if ctx.author.nick else ctx.author.name}**", colors.pink)
+        await send_notif(
+            ctx, f"The **restart** command has been issued by **{ctx.author.nick if ctx.author.nick else ctx.author.name}**"
+        )
         await self.client.close()
 
     # echoes the message sent by the author
     @commands.command()
-    async def echo(self, ctx, *, message):
-        db = Database(ctx.guild.id)
-        required_access = 3 # set access level for this command
-
-        if db.get_access(ctx.author.id) < required_access:
-            await send_basic_response(ctx, "You do not have access to this command.", colors.red)
+    async def echo(self, ctx: commands.Context, *, message: str) -> None:
+        """Makes the bot echo your message"""
+        if not await self.has_access(ctx, levels["echo"]):
             return
 
         await ctx.message.delete()
         await ctx.send(message)
-
-    # user management commands
-    @commands.command()
-    @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx, member: discord.Member, *, reason=None):
-        author = ctx.author.nick if ctx.author.nick else ctx.author.name
-        target = member.nick if member.nick else member.name
-
-        try:
-            await ctx.guild.kick(member, reason=reason)
-        except:
-            await send_basic_response(ctx, f"Am error occurred while trying to kick **{target}**.", colors.red)
-        else:
-            await send_basic_response(ctx, f"**{author}** kicked **{target}**. Reason: {reason}", colors.pink)
-
-    @commands.command()
-    @commands.has_permissions(ban_members=True)
-    async def ban(self, ctx, member: discord.Member, *, reason=None):
-        author = ctx.author.nick if ctx.author.nick else ctx.author.name
-        target = member.nick if member.nick else member.name
-
-        try:
-            await ctx.guild.ban(member, reason=reason)
-        except:
-            await send_basic_response(ctx, f"An error occurred while trying to ban **{target}**.", colors.red)
-        else:
-            await send_basic_response(ctx, f"**{author}** banned **{target}**. Reason: {reason}", colors.pink)
-
-    @commands.command()
-    @commands.has_permissions(manage_nicknames=True)
-    async def nickname(self, ctx, member: discord.Member, *, nick):
-        author = ctx.author.nick if ctx.author.nick else ctx.author.name
-        target = member.nick if member.nick else member.name
-
-        try:
-            await member.edit(nick=nick)
-        except:
-            await send_basic_response(ctx, f"An error occurred while trying to rename **{target}**.", colors.red)
-        else:
-            await send_basic_response(ctx, f"**{author}** renamed **{target}** to **{nick}**.", colors.pink)
-
-class Database:
-    def __init__(self, guild_id):
-        # init database controller
-        path_to_db = f'./data/{guild_id}.db'
-        self.conn = sqlite3.connect(path_to_db)
-        self.c = self.conn.cursor()
-
-        # init database table
-        with self.conn:
-            self.c.execute("CREATE TABLE IF NOT EXISTS users (uid INTEGER, access INTEGER)")
-
-    def get_access(self, uid):
-        with self.conn:
-            self.c.execute("SELECT access FROM users WHERE uid=:uid", {"uid": uid})
-            access = self.c.fetchone()
-
-        if access:
-            return access[0]
-        else:
-            return 0
-
-    def add_user(self, uid, access):
-        with self.conn:
-            self.c.execute("SELECT * FROM users WHERE uid=:uid", {"uid": uid})
-            data = self.c.fetchone()
-
-            if not data:
-                self.c.execute("INSERT INTO users VALUES (:uid, :access)", {"uid": uid, "access": access})
-
-    def delete_user(self, uid):
-        with self.conn:
-            self.c.execute("DELETE FROM users WHERE uid=:uid", {"uid": uid})
-
-    def update(self, uid, access):
-        self.add_user(uid, access)
-        with self.conn:
-            self.c.execute("UPDATE users SET access=:access WHERE uid=:uid", {"uid": uid, "access": access})
 
 async def setup(client):
     await client.add_cog(Admin(client))
