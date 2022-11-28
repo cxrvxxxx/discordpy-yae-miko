@@ -47,6 +47,11 @@ LOGGING_CONFIG = {
             "level"     : "DEBUG",
             "propagate" : False
         },
+        "bot.admin"   : {
+            "handlers"  : ["console"],
+            "level"     : "DEBUG",
+            "propagate" : False
+        },
     }
 }
 

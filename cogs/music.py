@@ -799,8 +799,10 @@ class Voice(commands.Cog):
                 colour=colors.pink,
                 title="❤️ Playing songs that you like",
                 description=desc
-            ), view=player_controls(ctx)
+            )
         )
+
+        await ctx.invoke(self.client.get_command("nowplaying"))
 
 async def setup(client: commands.Bot) -> None:
     """Adds the cog to the client"""
