@@ -21,9 +21,9 @@ class Slash(commands.Cog):
         query="Title to search or URL"
     )
     async def play(
-        self, *,
+        self,
         interaction: discord.Interaction,
-        query: str
+        *, query: str
     ) -> None:
         ctx = await self.client.get_context(interaction)
         await ctx.invoke(self.client.get_command("play"), query=query)

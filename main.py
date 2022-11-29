@@ -20,9 +20,10 @@ import logsettings
 
 # Version information
 PROJECT_NAME:   str = "Yae Miko - Discord Bot [discord.py]"
-VERSION:        str = "1.3.3"
+VERSION:        str = "1.3.4"
 AUTHOR:         str = "cxrvxxxx"
 REPO_URL:       str = "https://github.com/cxrvxxxx/yae-miko"
+TEST_GUILD_ID:  int = 907119292410130433
 
 # Logger
 logger = logsettings.logging.getLogger("bot")
@@ -50,6 +51,7 @@ class YaeMiko(commands.Bot):
     config: Dict[int, Config]
 
     def __init__(self) -> None:
+        self.test_guild = TEST_GUILD_ID
         self.prefix = prefix
         self.config = {}
         super().__init__(
