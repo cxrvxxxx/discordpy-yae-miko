@@ -22,6 +22,7 @@ levels = {
     "restart"       : 5,
     "setprefix"     : 3,
     "yaechannel"    : 3,
+    "sync"          : 5
 }
 
 class Admin(commands.Cog):
@@ -174,6 +175,9 @@ class Admin(commands.Cog):
     @commands.command()
     async def sync(self, ctx: commands.Context, *, args: str = " ") -> None:
         """Sync application commands"""
+        if not await self.has_access(ctx, levels["sync"]):
+            return
+
         params = args.split()
 
         clear = '-c' in params
