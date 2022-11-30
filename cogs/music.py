@@ -153,7 +153,8 @@ class Voice(commands.Cog):
                 Responses.bot_on_connect.format(
                     vc_name=ctx.author.voice.channel.name,
                     channel_name=ctx.channel.name
-                )
+                ),
+                delete_after=None
             )
 
         result = await player.play(query)
