@@ -38,7 +38,8 @@ async def send_error_message(
 
 async def send_notif(
     ctx: commands.Context,
-    message: discord.Message
+    message: discord.Message,
+    delete_after: float = 10
 ) -> discord.Message:
     """Notification message, self-destructs after 10 seconds"""
     return await ctx.send(
@@ -46,7 +47,7 @@ async def send_notif(
             description=message,
             colour=colors.pink
         ),
-        delete_after=10
+        delete_after = delete_after
     )
 
 class Responses:
