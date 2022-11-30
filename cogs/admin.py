@@ -173,7 +173,7 @@ class Admin(commands.Cog):
 
     @commands.command()
     async def sync(self, ctx: commands.Context, *, args: str = " ") -> None:
-        """Sync commands to tree"""
+        """Sync application commands"""
         params = args.split()
 
         clear = '-c' in params
@@ -189,9 +189,13 @@ class Admin(commands.Cog):
         if not do_global and not clear:
             ctx.bot.tree.copy_global_to(guild=guild)
 
-        logger.debug("Sync started")
-        synced = await ctx.bot.tree.sync(guild=None if do_global else guild)
-        logger.debug("Sync finished")
+        try:
+            logger.debug("Sync started")
+            synced = await ctx.bot.tree.sync(guild=None if do_global else guild)
+        except discord.HTTPException:
+            logger.debug("An error occurred while syncing application commands")
+        finally:
+            logger.debug("Sync finished")
 
         logger.debug(f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}")
         await send_notif(
