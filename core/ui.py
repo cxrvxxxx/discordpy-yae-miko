@@ -1,8 +1,5 @@
-from typing import Optional, Any
-import asyncio
 import discord
 from discord.ui import *
-from core import colors
 
 class PlayButton(Button):
     def __init__(self, ctx, freeze: bool = False) -> None:
@@ -11,7 +8,7 @@ class PlayButton(Button):
         self.ctx = ctx
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.ctx.invoke(self.ctx.bot.get_command("resume"))
+        await self.ctx.invoke(self.ctx.bot.get_command("resume"), normal = False)
         await interaction.message.edit(view=player_controls(self.ctx))
         await interaction.response.defer()
 
@@ -22,7 +19,7 @@ class PauseButton(Button):
         self.ctx = ctx
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.ctx.invoke(self.ctx.bot.get_command("pause"), normal=False)
+        await self.ctx.invoke(self.ctx.bot.get_command("pause"), normal = False)
         await interaction.message.edit(view=player_controls(self.ctx, paused = True))
         await interaction.response.defer()
 
@@ -34,7 +31,7 @@ class PrevButton(Button):
         self.ctx = ctx
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.ctx.invoke(self.ctx.bot.get_command("prev"), normal=False)
+        await self.ctx.invoke(self.ctx.bot.get_command("prev"), normal = False)
         await interaction.response.defer()
 
 class NextButton(Button):
@@ -44,7 +41,7 @@ class NextButton(Button):
         self.ctx = ctx
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.ctx.invoke(self.ctx.bot.get_command("skip"), normal=False)
+        await self.ctx.invoke(self.ctx.bot.get_command("skip"), normal = False)
         await interaction.message.edit(view=None)
 
 class StopButton(Button):

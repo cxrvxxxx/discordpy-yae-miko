@@ -2,7 +2,7 @@
 A module for administrative commands
 """
 # Standard imports
-from typing import Optional
+from typing import Optional, Union
 
 # Third-party library imports
 import discord
@@ -22,6 +22,7 @@ levels = {
     "restart"       : 5,
     "setprefix"     : 3,
     "yaechannel"    : 3,
+    "sync"          : 5
 }
 
 class Admin(commands.Cog):
@@ -170,6 +171,41 @@ class Admin(commands.Cog):
 
         await ctx.message.delete()
         await ctx.send(message)
+
+    @commands.command()
+    async def sync(self, ctx: commands.Context, *, args: str = " ") -> None:
+        """Sync application commands"""
+        if not await self.has_access(ctx, levels["sync"]):
+            return
+
+        params = args.split()
+
+        clear = '-c' in params
+        do_global = '-g' in params
+
+        guild = self.client.get_guild(self.client.test_guild)
+
+        assert isinstance(guild, discord.Guild)
+
+        if clear:
+            ctx.bot.tree.clear_commands(guild=None if do_global else guild)
+
+        if not do_global and not clear:
+            ctx.bot.tree.copy_global_to(guild=guild)
+
+        try:
+            logger.debug("Sync started")
+            synced = await ctx.bot.tree.sync(guild=None if do_global else guild)
+        except discord.HTTPException:
+            logger.debug("An error occurred while syncing application commands")
+        finally:
+            logger.debug("Sync finished")
+
+        logger.debug(f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}")
+        await send_notif(
+            ctx,
+            f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}"
+        )
 
 async def setup(client):
     await client.add_cog(Admin(client))
