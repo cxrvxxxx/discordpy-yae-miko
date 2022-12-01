@@ -183,7 +183,7 @@ class Admin(commands.Cog):
         clear = '-c' in params
         do_global = '-g' in params
 
-        guild = self.client.get_guild(self.client.test_guild)
+        guild = self.client.test_guild
 
         assert isinstance(guild, discord.Guild)
 
