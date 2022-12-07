@@ -12,6 +12,7 @@ import asyncio
 # Third-party library imports
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 # Core imports
 import logsettings
@@ -88,73 +89,51 @@ class Voice(commands.Cog):
                     self.config[guild.id].set(__name__, key, value)
 
     @commands.Cog.listener()
-    async def on_voice_state_update(
-        self,
-        member: discord.Member,
-        before: discord.VoiceState,
-        after: discord.VoiceState
-    ) -> None:
+    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
         """Called when a user updates their voice state"""
         await self.auto_disconnect(member, before, after)
 
-    @commands.command()
-    async def join(self, ctx: commands.Context) -> None:
-        """Make the bot join the user's voice channel"""
-        if not ctx.author.voice:
-            await send_error_message(
-                ctx,
-                Responses.user_no_voice
-            )
-            return
-        if ctx.voice_client:
-            await send_error_message(
-                ctx,
-                Responses.bot_is_connected.format(
-                    channel_name=ctx.voice_client.channel.name
-                )
-            )
-            return
-
-        await ctx.author.voice.channel.connect()
-
-    @commands.command(aliases=['p'])
-    async def play(self, ctx: commands.Context, *, query: str) -> None:
+    @app_commands.command(name="play", description="Connect to voice and play something.")
+    @app_commands.describe(query="Title or URL of audio to be played")
+    async def play(self, interaction: discord.Interaction, *, query: str) -> None:
         """Plays a song from specified query"""
-        try:
-            await ctx.message.delete()
-        except discord.NotFound as err:
-            logger.debug(err)
-
-        if not ctx.author.voice:
-            await send_error_message(
-                ctx,
-                Responses.user_no_voice
+        if not interaction.user.voice:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.user_no_voice
+                ),
+                delete_after=10
             )
             return
 
-        player = self.music.get_player(ctx.guild.id)
+        player = self.music.get_player(interaction.guild_id)
 
-        if player and ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
+        if player and interaction.channel != player.channel:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_wrong_channel.format(
+                        channel_name=player.channel.name
+                    )
+                ),
+                delete_after=10
             )
             return
 
-        if not ctx.voice_client:
-            await ctx.invoke(self.client.get_command("join"))
+        if not interaction.guild.voice_client:
+            await interaction.user.voice.channel.connect()
 
         if not player:
-            player = self.music.create_player(ctx, on_play = "nowplaying")
-            await send_notif(
-                ctx,
-                Responses.bot_on_connect.format(
-                    vc_name=ctx.author.voice.channel.name,
-                    channel_name=ctx.channel.name
-                ),
-                delete_after=None
+            player = self.music.create_player(await self.client.get_context(interaction))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    description=Responses.bot_on_connect.format(
+                        vc_name=interaction.user.voice.channel.name,
+                        channel_name=interaction.channel.name
+                    ),
+                    colour=colors.pink
+                )
             )
 
         result = await player.play(query)
@@ -162,110 +141,64 @@ class Voice(commands.Cog):
             song = result.get("song")
             embed = discord.Embed(
                 colour=colors.pink,
-                description=f"Successfully added to queue by {ctx.author.mention}."
+                description=f"Successfully added to queue by {interaction.user.mention}."
             )
-            embed.set_thumbnail(url=song.get_thumbnail())
+            embed.set_thumbnail(url=song.thumbnail)
             embed.set_author(
-                name=f"{song.get_title()}",
+                name=f"{song.title}",
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
-            await ctx.send(embed=embed, delete_after=10)
+            await interaction.response.send_message(embed=embed, delete_after=10)
 
-    @commands.command(aliases=['np'])
-    async def nowplaying(self, ctx: commands.Context) -> None:
-        """Displays the currently playing song/track"""
-        pref = self.client.prefix(self.client, ctx.message)
-
-        player = self.music.get_player(ctx.guild.id)
-
-        if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
-            )
-            return
-
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
-            )
-            return
-
-        queue = player.get_queue()
-
-        if not queue:
-            await send_error_message(
-                ctx,
-                Responses.music_empty_queue
-            )
-            return
-
-        embed = discord.Embed(
-            colour=colors.pink,
-            description=f"Now playing in **{ctx.author.voice.channel.name}**"
-        )
-        embed.set_thumbnail(
-            url=queue[0].get_thumbnail()
-        )
-        embed.set_author(
-                name=f"{queue[0].get_title()}",
-                icon_url="https://i.imgur.com/rcXLQLG.png"
-            )
-
-        embed.set_footer(
-            text=f"If you like this song, use '{pref}fave' to add this to your favorites!"
-        )
-        if player.last_np_msg:
-            await player.last_np_msg.delete()
-
-        player.last_np_msg = await ctx.send(embed=embed, view=player_controls(ctx))
-
-    @commands.command(aliases=['q'])
-    async def queue(self, ctx: commands.Context) -> None:
+    @app_commands.command(name="queue", description="View the list of queued songs")
+    async def queue(self, interaction: discord.Interaction) -> None:
         """Displays the list of queued songs/tracks"""
-        await ctx.message.delete()
-        pref = self.client.prefix(self.client, ctx.message)
-
-        player = self.music.get_player(ctx.guild.id)
+        player = self.music.get_player(interaction.guild_id)
 
         if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_no_player
+                ),
+                delete_after=10
             )
             return
 
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
+        if player and interaction.channel != player.channel:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_wrong_channel.format(
+                        channel_name=player.channel.name
+                    )
+                ),
+                delete_after=10
             )
             return
 
-        queue = player.get_queue()
+        queue = player.queue
 
         if not queue:
-            await send_error_message(
-                ctx,
-                Responses.music_empty_queue
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_empty_queue
+                ),
+                delete_after=10
             )
             return
 
         embed = discord.Embed(
             colour=colors.pink,
-            description=f"Now playing in **{ctx.author.voice.channel.name}**"
+            description=f"Now playing in **{player.channel.name}**"
         )
         embed.set_thumbnail(
-            url=queue[0].get_thumbnail()
+            url=queue[0].thumbnail
         )
         embed.set_author(
-                name=f"{queue[0].get_title()}",
+                name=f"{queue[0].title}",
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
@@ -279,7 +212,7 @@ class Voice(commands.Cog):
                 if index == 0:
                     continue
 
-                line = f"\n `{index}` {song.get_title()}"
+                line = f"\n `{index}` {song.title}"
                 if index < 10:
                     songs += line
                 else:
@@ -295,40 +228,50 @@ class Voice(commands.Cog):
         )
 
         embed.set_footer(
-            text=f"If you like this song, use '{pref}fave' to add this to your favorites!"
+            text=f"If you like this song, use '/fave' to add this to your favorites!"
         )
-        await ctx.send(embed=embed, delete_after=10)
 
-    @commands.command(aliases=['rm'])
-    async def remove(self, ctx: commands.Context, index: int) -> None:
+        await interaction.response.send_message(embed=embed, delete_after=10)
+
+    @app_commands.command(name="remove", description="Removes a song from the queue")
+    @app_commands.describe(index="The ID of the song to dequeue")
+    async def remove(self, interaction: discord.Interaction, index: int) -> None:
         """Removes a song/track from the queue"""
-        pref = self.client.prefix(self.client, ctx.message)
 
-        player = self.music.get_player(ctx.guild.id)
+        player = self.music.get_player(interaction.guild.id)
 
         if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_no_player
+                ),
+                delete_after=10
             )
             return
 
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
+        if player and interaction.channel != player.channel:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_wrong_channel.format(
+                        channel_name=player.channel.name
+                    )
+                ),
+                delete_after=10
             )
             return
 
         song = player.dequeue(index)
-        queue = player.get_queue()
+        queue = player.queue
 
         if not queue:
-            await send_error_message(
-                ctx,
-                Responses.music_empty_queue
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_empty_queue
+                ),
+                delete_after=10
             )
             return
 
@@ -337,10 +280,10 @@ class Voice(commands.Cog):
             description="Song removed from queue."
         )
         embed.set_thumbnail(
-            url=song.get_thumbnail()
+            url=song.thumbnail
         )
         embed.set_author(
-                name=f"{song.get_title()}",
+                name=f"{song.title}",
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
@@ -352,7 +295,7 @@ class Voice(commands.Cog):
                 if idx == 0:
                     pass
                 else:
-                    songs = songs + f"\n `{idx}` {song.get_title()}"
+                    songs = songs + f"\n `{idx}` {song.title}"
 
         embed.add_field(
             name="🎶 Up Next...",
@@ -361,287 +304,93 @@ class Voice(commands.Cog):
         )
 
         embed.set_footer(
-            text=f"If you like this song, use '{pref}fave' to add this to your favorites!"
-        )
-        await ctx.send(embed=embed, delete_after=10)
-
-        await ctx.message.delete()
-
-    @commands.command()
-    async def prev(self, ctx: commands.Context, normal: bool = True) -> None:
-        """Plays the previous song/track in the queue"""
-        if not ctx.author.voice:
-            await send_error_message(
-                ctx,
-                Responses.user_no_voice
-            )
-            return
-
-        player = self.music.get_player(ctx.guild.id)
-
-        if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
-            )
-            return
-
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
-            )
-            return
-
-        song = await player.prev()
-
-        if not song:
-            await send_error_message(
-                ctx,
-                Responses.music_no_previous
-            )
-            return
-
-        embed = discord.Embed(
-            colour=colors.pink,
-            description=f"Playing last song, 🎶 **{song.get_title()}**."
+            text=f"If you like this song, use '/fave' to add this to your favorites!"
         )
 
-        await ctx.send(embed=embed, delete_after=10)
+        await interaction.response.send_message(embed=embed, delete_after=10)
 
-        # if invoked from button callback
-        if not normal:
-            return
-
-        await ctx.message.delete()
-
-    @commands.command()
-    async def skip(self, ctx: commands.Context, normal: bool = True) -> None:
-        """Plays the next song/track in the queue"""
-        if not ctx.author.voice:
-            await send_error_message(
-                ctx,
-                Responses.user_no_voice
-            )
-            return
-
-        player = self.music.get_player(ctx.guild.id)
-
-        if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
-            )
-            return
-
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
-            )
-            return
-
-        song = await player.skip()
-
-        if not song:
-            await send_error_message(
-                ctx,
-                Responses.music_no_skip
-            )
-            return
-
-        embed = discord.Embed(
-            colour=colors.pink,
-            description=f"Skipping 🎶 **{song.get_title()}**."
-        )
-
-        await ctx.send(embed=embed, delete_after=10)
-
-        # if invoked from button callback
-        if not normal:
-            return
-
-        await ctx.message.delete()
-
-    @commands.command()
-    async def pause(self, ctx: commands.Context, normal: bool = True) -> None:
-        """Pause playback of the current song/track"""
-        if not ctx.author.voice:
-            await send_error_message(
-                ctx,
-                Responses.user_no_voice
-            )
-            return
-
-        player = self.music.get_player(ctx.guild.id)
-
-        if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
-            )
-            return
-
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
-            )
-            return
-
-        song = await player.pause()
-
-        if not song:
-            await send_error_message(
-                ctx,
-                Responses.music_no_pause
-            )
-            return
-
-        embed = discord.Embed(
-            colour=colors.pink,
-            description=f"Paused 🎶 **{song.get_title()}**."
-        )
-
-        await ctx.send(embed=embed, delete_after=10)
-
-        # if invoked from button callback
-        if not normal:
-            return
-
-        await ctx.message.delete()
-
-    @commands.command()
-    async def resume(self, ctx: commands.Context, normal: bool = True) -> None:
-        """Resume playback of current song/track"""
-        if not ctx.author.voice:
-            await send_error_message(
-                ctx,
-                Responses.user_no_voice
-            )
-            return
-
-        player = self.music.get_player(ctx.guild.id)
-
-        if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
-            )
-            return
-
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
-            )
-            return
-
-        song = await player.resume()
-
-        if not song:
-            await send_error_message(
-                ctx,
-                Responses.music_no_resume
-            )
-            return
-
-        embed = discord.Embed(
-            colour=colors.pink,
-            description=f"Resumed 🎶 **{song.get_title()}**."
-        )
-
-        await ctx.send(embed=embed, delete_after=10)
-
-        # if invoked from button callback
-        if not normal:
-            return
-
-        await ctx.message.delete()
-
-    @commands.command(aliases=['disconnect', 'dc'])
-    async def leave(self, ctx: commands.Context) -> None:
+    @app_commands.command(name="leave", description="Leave current voice channel")
+    async def leave(self, interaction: discord.Interaction) -> None:
         """Makes the bot disconnect from the user's voice channel"""
-        if not ctx.voice_client:
-            await send_error_message(
-                ctx,
-                Responses.bot_not_connected
+        if not interaction.guild.voice_client:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.bot_not_connected
+                ),
+                delete_after=10
             )
             return
 
-        player = self.music.get_player(ctx.guild.id)
+        player = self.music.get_player(interaction.guild.id)
 
-        if player:
-            if ctx.channel != player.get_channel():
-                await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
+        if not player:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_no_player
+                ),
+                delete_after=10
             )
-                return
+            return
 
-            self.music.close_player(ctx.guild.id)
+        self.music.close_player(interaction.guild.id)
 
         embed = discord.Embed(
             colour=colors.pink,
-            description=f"Disconnected from **[{ctx.voice_client.channel.name}]** and \
-                        unbound from **[{player.get_channel().name if player else 'channel'}]**."
+            description=f"Disconnected from **[{interaction.guild.voice_client.channel.name}]** and \
+                        unbound from **[{player.channel.name if player else 'channel'}]**."
         )
 
-        await ctx.voice_client.disconnect()
-        await ctx.send(embed=embed)
+        await interaction.guild.voice_client.disconnect()
+        await interaction.response.send_message(embed=embed, delete_after=10)
 
-    @commands.command(aliases=['v', 'vol'])
-    async def volume(self, ctx: commands.Context, vol = None) -> None:
+    @app_commands.command(name="volume", description="Set playback volume")
+    @app_commands.describe(vol="Value from 0 to 100")
+    async def volume(self, interaction: discord.Interaction, vol: int) -> None:
         """Sets the volume of the player"""
-        player = self.music.get_player(ctx.guild.id)
+        player = self.music.get_player(interaction.guild.id)
 
-        if not vol:
-            await send_notif(
-                ctx,
-                Responses.music_player_volume.format(
-                    volume=int(player.get_volume() * 100)
-                )
-            )
-            return
-
-        if ctx.channel != player.get_channel():
-            await send_error_message(
-                ctx,
-                Responses.music_wrong_channel.format(
-                    channel_name=player.get_channel().name
-                )
+        if player and interaction.channel != player.channel:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_wrong_channel.format(
+                        channel_name=player.channel.name
+                    )
+                ),
+                delete_after=10
             )
             return
 
         vol = float(vol)
         if vol < 0 or vol > 100:
-            await send_error_message(
-                ctx,
-                Responses.music_player_volume_invalid
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_player_volume_invalid
+                ),
+                delete_after=10
             )
             return
 
-        if not ctx.author.voice:
-            await send_error_message(
-                ctx,
-                Responses.user_no_voice
+        if not interaction.user.voice:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.user_no_voice
+                ),
+                delete_after=10
             )
             return
 
         if not player:
-            await send_error_message(
-                ctx,
-                Responses.music_no_player
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=colors.red,
+                    description=Responses.music_no_player
+                ),
+                delete_after=10
             )
             return
 
@@ -652,7 +401,7 @@ class Voice(commands.Cog):
             description=f"Volume set to **{int(volume * 100)}%**."
         )
 
-        await ctx.send(embed=embed, delete_after=10)
+        await interaction.response.send_message(embed=embed, delete_after=10)
 
     @commands.command()
     async def fave(self, ctx: commands.Context) -> None:

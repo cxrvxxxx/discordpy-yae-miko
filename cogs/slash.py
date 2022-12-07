@@ -59,11 +59,5 @@ class Slash(commands.Cog):
         )
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="play", description="Play something.")
-    @app_commands.describe(query="Title to search or URL")
-    async def play(self, interaction: discord.Interaction, *, query: str) -> None:
-        ctx = await self.client.get_context(interaction)
-        await ctx.invoke(self.client.get_command("play"), query=query)
-
 async def setup(client):
     await client.add_cog(Slash(client))

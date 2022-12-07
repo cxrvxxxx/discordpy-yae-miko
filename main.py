@@ -20,7 +20,7 @@ import logsettings
 
 # Version information
 PROJECT_NAME:   str = "Yae Miko - Discord Bot [discord.py]"
-VERSION:        str = "1.3.5"
+VERSION:        str = "1.4.6"
 AUTHOR:         str = "cxrvxxxx"
 REPO_URL:       str = "https://github.com/cxrvxxxx/yae-miko"
 TEST_GUILD_ID:  int = 907119292410130433
@@ -51,14 +51,14 @@ class YaeMiko(commands.Bot):
     config: Dict[int, Config]
 
     def __init__(self) -> None:
-        self.test_guild = TEST_GUILD_ID
-        self.prefix = prefix
-        self.config = {}
         super().__init__(
             command_prefix=prefix,
             help_command=None,
             intents=discord.Intents().all()
         )
+        self.test_guild = discord.Object(id=TEST_GUILD_ID)
+        self.prefix = prefix
+        self.config = {}
 
     async def setup_hook(self) -> None:
         """Performs setup tasks on before the bot starts"""

@@ -11,6 +11,7 @@ from discord.ext import commands
 # Core imports
 import logsettings
 from core.model import Database
+from core.colors import *
 from core.message import send_error_message, send_notif
 
 # Logger
@@ -183,9 +184,7 @@ class Admin(commands.Cog):
         clear = '-c' in params
         do_global = '-g' in params
 
-        guild = self.client.get_guild(self.client.test_guild)
-
-        assert isinstance(guild, discord.Guild)
+        guild = self.client.test_guild
 
         if clear:
             ctx.bot.tree.clear_commands(guild=None if do_global else guild)
@@ -202,9 +201,11 @@ class Admin(commands.Cog):
             logger.debug("Sync finished")
 
         logger.debug(f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}")
-        await send_notif(
-            ctx,
-            f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}"
+        await ctx.send(
+            embed=discord.Embed(
+                colour=pink,
+                description=f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}"
+            )
         )
 
 async def setup(client):

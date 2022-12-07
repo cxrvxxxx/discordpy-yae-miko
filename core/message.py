@@ -12,9 +12,7 @@ async def send_basic_response(
     color: discord.Color,
     delete_after: Optional[Union[int, None]] = None
 ) -> discord.Message:
-    """
-    Send an embed-only message
-    """
+    """Send an embed-only message"""
     return await ctx.send(
         embed = discord.Embed(
             description = message,
@@ -23,32 +21,29 @@ async def send_basic_response(
         delete_after = delete_after
     )
 
-async def send_error_message(
-    ctx: commands.Context,
-    message: discord.Message
-) -> discord.Message:
+async def send_error_message(ctx: commands.Context, message: discord.Message, delete_after: float = 10, no_send: bool = False ) -> Union[discord.Embed, discord.Message]:
     """Error message, self-destructs after 10 seconds"""
-    return await ctx.send(
-        embed=discord.Embed(
-            description=message,
-            colour=colors.red
-        ),
-        delete_after=10
-    )
+    embed = discord.Embed(
+        description=message,
+        colour=colors.red
+    ),
 
-async def send_notif(
-    ctx: commands.Context,
-    message: discord.Message,
-    delete_after: float = 10
-) -> discord.Message:
+    if no_send:
+        return embed
+
+    await ctx.send(embed=embed, delete_after=delete_after)
+
+async def send_notif(ctx: commands.Context, message: discord.Message, delete_after: float = 10, no_send: bool = False) -> Union[discord.Embed, discord.Message]:
     """Notification message, self-destructs after 10 seconds"""
-    return await ctx.send(
-        embed=discord.Embed(
-            description=message,
-            colour=colors.pink
-        ),
-        delete_after = delete_after
-    )
+    embed = discord.Embed(
+        description=message,
+        colour=colors.pink
+    ),
+
+    if no_send:
+        return embed
+
+    await ctx.send(embed=embed, delete_after=delete_after)
 
 class Responses:
     # TODO: dynamically assign these from file
