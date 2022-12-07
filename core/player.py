@@ -1,21 +1,23 @@
 """
 Music Player
-    - Provides an easy way to stream audio to discord
-      from a song title or a youtube link.
+    Provides an easy way to stream audio to discord
+    from a song title or a youtube link.
 """
 # Standard imports
-from typing import List, Dict, ClassVar, Optional, Any, Union
+from typing import List, Dict, ClassVar, Optional, Any, Union, Callable
 import asyncio
 
 # Third party-library imports
 import aiohttp
 import youtube_dl
 import discord
+from discord.ext import commands
 
 # Core imports
 import logsettings
 from core import colors
-from core.message import send_basic_response
+from core.message import Responses
+from core.ui import player_controls
 
 # Logger
 logger = logsettings.logging.getLogger("musicplayer")
@@ -26,15 +28,15 @@ class Song:
 
     Attributes
     -----------
-    __source
+    source
         source URL used for fetching song data
-    __title
+    title
         song title
-    __author
+    author
         song uploader
-    __url
+    url
         song URL
-    __thumbnail
+    thumbnail
         song thumbnail URL
 
     Methods
@@ -50,58 +52,37 @@ class Song:
     set_thumbnail(thumbnail)
         set song thumbnail URL
     """
-    __source: str
-    __title: str
-    __author: str
-    __url: str
-    __thumbnail: str
-
     def __init__(self, source: str, title: str, author: str, url: str, thumbnail: str):
-        self.set_source(source)
-        self.set_title(title)
-        self.set_author(author)
-        self.set_url(url)
-        self.set_thumbnail(thumbnail)
+        self.__SOURCE    : str = source
+        self.__TITLE     : str = title
+        self.__AUTHOR    : str = author
+        self.__URL       : str = url
+        self.__THUMBNAIL : str = thumbnail
 
-    def set_source(self, source: str) -> None:
-        """Set song source URL"""
-        self.__source = source
-
-    def set_title(self, title: str) -> None:
-        """Set song title"""
-        self.__title = title
-
-    def set_author(self, author: str) -> None:
-        """Set song author"""
-        self.__author = author
-
-    def set_url(self, url: str) -> None:
-        """Set song URL"""
-        self.__url = url
-
-    def set_thumbnail(self, thumbnail: str) -> None:
-        """Set song thumbnail URL"""
-        self.__thumbnail = thumbnail
-
-    def get_source(self) -> str:
+    @property
+    def source(self) -> str:
         """Return song source URL"""
-        return self.__source
+        return self.__SOURCE
 
-    def get_title(self) -> str:
+    @property
+    def title(self) -> str:
         """Return song title"""
-        return self.__title
+        return self.__TITLE
 
-    def get_author(self) -> str:
+    @property
+    def author(self) -> str:
         """Return song author"""
-        return self.__author
+        return self.__AUTHOR
 
-    def get_url(self) -> str:
+    @property
+    def url(self) -> str:
         """Return song URL"""
-        return self.__url
+        return self.__URL
 
-    def get_thumbnail(self) -> str:
+    @property
+    def thumbnail(self) -> str:
         """Return song thumbnail URL"""
-        return self.__thumbnail
+        return self.__THUMBNAIL
 
 class Player:
     """
@@ -155,29 +136,15 @@ class Player:
     stop()
         Stop audio stream
     """
-    __ctx: discord.ext.commands.Context
-    __loop: asyncio.BaseEventLoop
-    __queue: List[Song]
-    __is_playing: bool
-    __now_playing: Song
-    __on_play: str
-    __volume: float
-    __YDL_OPTIONS: Dict[str, Union[str, bool]]
-    __FFMPEG_OPTS: Dict[str, str]
-    last_np_msg: discord.Message
-
-    def __init__(self, ctx: discord.ext.commands.Context, on_play: str) -> None:
-        self.__ctx = ctx
-        self.__loop = ctx.bot.loop
-        self.__queue = []
-        self.__is_playing = False
-        self.__now_playing = None
-        self.__last_song = None
-        self.__on_play = on_play
-        self.__volume = 1.0
-        self.last_np_msg = None
-
-        self.__YDL_OPTIONS = {
+    def __init__(self, ctx: discord.ext.commands.Context) -> None:
+        self.__ctx         : commands.Context           = ctx
+        self.__queue       : List[Song]                 = []
+        self.__is_playing  : bool                       = False
+        self.__now_playing : Song                       = None
+        self.__last_song   : Song                       = None
+        self.__ui          : PlayerUI                   = PlayerUI()
+        self.__volume      : float                      = 1.0
+        self.__YDL_OPTIONS : Dict[str, Union[str, int]] = {
             "format": "bestaudio/best",
             "restrictfilenames": True,
             "noplaylist": True,
@@ -188,11 +155,16 @@ class Player:
             "no_warnings": True,
             "source_address": "0.0.0.0"
         }
-
-        self.__FFMPEG_OPTS = {
+        self.__FFMPEG_OPTS : Dict[str, str]             = {
             "options": "-vn -loglevel quiet -hide_banner -nostats",
             "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 0 -nostdin"
         }
+
+    # Extended attributes
+    @property
+    def channel(self) -> discord.TextChannel:
+        """Fetch channel the player was created from"""
+        return self.__ctx.channel
 
     @property
     def is_playing(self) -> bool:
@@ -200,31 +172,22 @@ class Player:
         return self.__is_playing
 
     @property
+    def last_song(self) -> Song:
+        """Returns the song that was played previously"""
+        return self.__last_song
+
+    @property
+    def loop(self) -> asyncio.BaseEventLoop:
+        """Returns the event loop"""
+        return self.__ctx.bot.loop
+
+    @property
     def now_playing(self) -> Song:
         """Fetch currently playing song"""
         return self.__now_playing
 
     @property
-    def last_song(self) -> Song:
-        """Returns the song that was played previously"""
-        return self.__last_song
-
-    def set_volume(self, volume: int) -> float:
-        """Set player volume"""
-        volume = volume if volume in range (1, 100 + 1) else 100
-        self.__volume = volume / 100
-        self.__ctx.voice_client.source.volume = float(self.__volume)
-        return self.__volume
-
-    def dequeue(self, index: int) -> Song:
-        """Remove an item from the queue"""
-        return self.__queue.pop(int(index)- 1)
-
-    def get_loop(self) -> Any:
-        """Fetch bot event loop"""
-        return self.__loop
-
-    def get_queue(self) -> List[Song]:
+    def queue(self) -> List[Song]:
         """Fetch current player queue"""
         tracklist = []
         overflow = 0
@@ -239,17 +202,13 @@ class Player:
 
         return tracklist
 
-    def get_channel(self) -> discord.TextChannel:
-        """Fetch channel the player was created from"""
-        return self.__ctx.channel
-
-    def get_volume(self) -> float:
+    @property
+    def volume(self) -> float:
         """Fetch player volume"""
         return self.__volume
 
     async def fetch_track(self, query: str) -> Song:
         """Process query and returns a song instance"""
-        msg = await send_basic_response(self.__ctx, "Processing query, please wait...", colors.pink)
         # skip process if user passed a youtube URL
         if query.startswith("https://www.youtube.com/watch?v="):
             src = query
@@ -261,12 +220,6 @@ class Player:
                 search_url += f"{key}+"
             search_url = search_url[:-1]
 
-            await msg.edit(
-                embed=discord.Embed(
-                    description="Fetching video...",
-                    color=colors.pink
-                )
-            )
             logger.debug(f"Parsed query into YTSearch URL (ID: {self.__ctx.guild.id})")
 
             async with aiohttp.ClientSession() as session:
@@ -280,15 +233,8 @@ class Player:
                     break
                 src += html[i]
 
-        await msg.edit(
-                embed=discord.Embed(
-                    description="Processing video data...",
-                    color=colors.pink
-                )
-            )
-
         ytdl = youtube_dl.YoutubeDL(self.__YDL_OPTIONS)
-        data = await self.__loop.run_in_executor(
+        data = await self.loop.run_in_executor(
             None,
             lambda: ytdl.extract_info(src, download = False)
         )
@@ -298,7 +244,7 @@ class Player:
         channel = data["uploader"]
         url = "https://www.youtube.com/watch?v=" + data["id"]
         thumbnail = data["thumbnail"]
-        await msg.delete()
+
         return Song(data["url"], title, channel, url, thumbnail)
 
     def play_song(self, silent: Optional[bool] = False) -> None:
@@ -308,7 +254,7 @@ class Player:
             self.__now_playing = self.__queue.pop(0)
             source = discord.PCMVolumeTransformer(
                 discord.FFmpegPCMAudio(
-                    self.__now_playing.get_source(),
+                    self.__now_playing.source,
                     **self.__FFMPEG_OPTS
                 ),
                 volume = self.__volume
@@ -323,25 +269,18 @@ class Player:
 
             self.__is_playing = True
             logger.debug(f"Transitioned to next song in the queue (ID: {self.__ctx.guild.id})")
-
-            if self.__on_play and not silent:
-                on_play = self.__ctx.bot.get_command(self.__on_play)
-
-                if on_play:
-                    self.__loop.create_task(self.__ctx.invoke(on_play))
-                    logger.debug(f"Executed on-play hook (ID: {self.__ctx.guild.id})")
+            self.loop.create_task(
+                self.__ui.renderNowPlaying(self)
+            )
         except IndexError: # Expected error when there are no more tracks in queue
             self.__now_playing = None
             self.__is_playing = False
             logger.debug(f"Playback failed, queue might be empty (ID: {self.__ctx.guild.id})")
 
-            # Remove controls from latest "now playing" message
-            if self.last_np_msg:
-                self.__loop.create_task(
-                    self.last_np_msg.edit(
-                        view=None
-                    )
-                )
+        if not self.now_playing and not self.is_playing:
+            self.loop.create_task(
+                self.__ui.clearPlayerControls(self)
+            )
 
         return self.__now_playing
 
@@ -363,6 +302,9 @@ class Player:
         if song:
             self.__queue.append(song)
             logger.debug(f"Queued track (ID: {self.__ctx.guild.id})")
+            if self.is_playing:
+                await self.__ui.renderNowPlaying(self)
+                logger.debug(f"Updated player controls (ID: {self.__ctx.guild.id}")
 
         if not self.__is_playing and song:
             logger.debug(f"Started playback (ID: {self.__ctx.guild.id})")
@@ -373,15 +315,36 @@ class Player:
             "song": song if song else None
         }
 
-    async def skip(self) -> Union[Song, None]:
+    # Player control methods
+    def set_volume(self, volume: int) -> float:
+        """Set player volume"""
+        volume = volume if volume in range (1, 100 + 1) else 100
+        self.__volume = volume / 100
+        self.__ctx.voice_client.source.volume = float(self.__volume)
+        return self.__volume
+
+    def dequeue(self, index: int) -> Song:
+        """Remove an item from the queue"""
+        return self.__queue.pop(int(index)- 1)
+
+    async def skip(self, interaction: Optional[discord.Interaction]) -> Union[Song, None]:
         """Skip currently playing song"""
         if self.__is_playing:
             self.__ctx.voice_client.stop()
             logger.debug(f"Skippped to next track (ID: {self.__ctx.guild.id})")
 
-        return self.__now_playing
+            if interaction:
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        colour=colors.pink,
+                        description=f"Stopped 🎶 **{self.__now_playing.title}**."
+                    ),
+                    delete_after=10
+                )
 
-    async def prev(self) -> Union[Song, None]:
+            await self.__ui.renderNowPlaying(self)
+
+    async def prev(self, interaction: Optional[discord.Interaction]=None) -> Union[Song, None]:
         """Play the previous song"""
         if self.__is_playing and self.__last_song:
             self.__queue.insert(0, self.__last_song)
@@ -389,27 +352,54 @@ class Player:
             self.__ctx.voice_client.stop()
             logger.debug(f"Skipped to previous track (ID: {self.__ctx.guild.id})")
 
-            return self.__now_playing
+            if interaction:
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        colour=colors.pink,
+                        description=f"Stopped 🎶 **{self.__now_playing.title}**."
+                    ),
+                    delete_after=10
+                )
 
-    async def pause(self) -> Union[Song, None]:
+            await self.__ui.renderNowPlaying(self)
+
+    async def pause(self, interaction: Optional[discord.Interaction]=None) -> Union[Song, None]:
         """Pauses playback of current song"""
         if self.__is_playing:
             self.__is_playing = False
             self.__ctx.voice_client.pause()
             logger.debug(f"Paused playback (ID: {self.__ctx.guild.id})")
 
-            return self.now_playing
+            if interaction:
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        colour=colors.pink,
+                        description=f"Paused 🎶 **{self.__now_playing.title}**."
+                    ),
+                    delete_after=10
+                )
 
-    async def resume(self) -> Union[Song, None]:
+                await self.__ui.renderNowPlaying(self)
+
+    async def resume(self, interaction: Optional[discord.Interaction]=None) -> Union[Song, None]:
         """Resumes playback of current song"""
         if not self.__is_playing:
             self.__is_playing = True
             self.__ctx.voice_client.resume()
             logger.debug(f"Resumed playback (ID: {self.__ctx.guild.id})")
 
-            return self.now_playing
+            if interaction:
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        colour=colors.pink,
+                        description=f"Resumed 🎶 **{self.__now_playing.title}**."
+                    ),
+                    delete_after=10
+                )
 
-    async def stop(self) -> None:
+                await self.__ui.renderNowPlaying(self)
+
+    async def stop(self, interaction: Optional[discord.Interaction]=None) -> None:
         """Stop audio stream"""
         if self.__is_playing:
             self.__now_playing = None
@@ -417,6 +407,17 @@ class Player:
             logger.debug(f"Cleared queue (ID: {self.__ctx.guild.id})")
             self.__ctx.voice_client.stop()
             logger.debug(f"Stopped playback (ID: {self.__ctx.guild.id})")
+
+            if interaction:
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        colour=colors.pink,
+                        description=f"Stopped 🎶 **{self.__now_playing.title}**."
+                    ),
+                    delete_after=10
+                )
+
+            await self.__ui.renderNowPlaying(self)
 
 class Music:
     """
@@ -441,18 +442,14 @@ class Music:
     def __init__(self) -> None:
         self.__players  = {}
 
-    def create_player(
-        self,
-        ctx: discord.ext.commands.Context,
-        on_play: Optional[bool] = None
-    ) -> Player:
+    def create_player(self, ctx: discord.ext.commands.Context) -> Player:
         """Create player instance"""
         if ctx.guild.id in self.__players:
             return self.__players.get(ctx.guild.id)
 
-        player = Player(ctx, on_play)
+        player = Player(ctx)
         self.__players[ctx.guild.id] = player
-        logger.debug(f"Created player instance in guild: {player.get_channel().guild.id}")
+        logger.info(f"Created Player instance (Guild ID: {player.channel.guild.id})")
         return player
 
     def get_player(self, player_id: int) -> Player:
@@ -464,6 +461,59 @@ class Music:
         player = self.get_player(player_id)
 
         if player:
-            logger.debug(f"Destroyed player in guild: {player.get_channel().guild.id}")
-            player.get_loop().create_task(player.stop())
+            logger.info(f"Destroyed Player instance (Guild ID: {player.channel.guild.id})")
+            player.loop.create_task(player.stop())
             self.__players.pop(player_id)
+
+class PlayerUI:
+    def __init__(self):
+        self.hook: discord.Message = None
+
+    async def renderNowPlaying(self, player: Player):
+        song = player.now_playing
+        if not song:
+            await self.send(player, view=None)
+            logger.debug(f"Removed player controls (ID: {player.channel.guild.id})")
+            return
+
+        embed = discord.Embed(
+            colour=colors.pink,
+            description=f"Now playing in **{player.channel.name}**"
+        )
+        embed.set_thumbnail(
+            url=song.thumbnail
+        )
+        embed.set_author(
+                name=f"{song.title}",
+                icon_url="https://i.imgur.com/rcXLQLG.png"
+            )
+        embed.set_footer(
+            text=f"If you like this song, use '/fave' to add this to your favorites!"
+        )
+
+        await self.send(
+            player,
+            embed=embed,
+            view=player_controls(player, paused=True if not player.is_playing else False) if player.queue else None
+        )
+
+    async def clearPlayerControls(self, player: Player):
+        await self.send(player, view=None)
+
+    async def send(self, player, **kwargs):
+        if self.hook:
+            self.hook = await self.hook.edit(
+                content      = kwargs.get("content"),
+                embed        = kwargs.get("embed"),
+                view         = kwargs.get("view", None),
+                delete_after = kwargs.get("delete_after")
+            )
+            logger.debug(f"Updated message (ID: {self.hook.id} GUILD: {self.hook.guild.id})")
+        else:
+            self.hook = await player.channel.send(
+                content      = kwargs.get("content"),
+                embed        = kwargs.get("embed"),
+                view         = kwargs.get("view"),
+                delete_after = kwargs.get("delete_after")
+            )
+            logger.debug(f"Added message (ID: {self.hook.id} GUILD: {self.hook.guild.id})")
