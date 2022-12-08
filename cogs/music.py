@@ -8,6 +8,7 @@ Commands
 # Standard imports
 import os
 import asyncio
+from typing import Dict
 
 # Third-party library imports
 import discord
@@ -17,8 +18,7 @@ from discord import app_commands
 # Core imports
 import logsettings
 from core import colors
-from core.player import Music
-from core.ui import player_controls
+from core.musicplayer import music
 from core.message import send_error_message, send_notif, Responses
 
 # Logger
@@ -37,15 +37,10 @@ class Voice(commands.Cog):
     """Command class"""
     def __init__(self, client: commands.Bot) -> None:
         self.client = client
-        self.music  = Music()
         self.config = client.config
+        self.music  = music.Music()
 
-    async def auto_disconnect(
-        self,
-        member  : discord.Member,
-        before  : discord.VoiceState,
-        after   : discord.VoiceState
-    ) -> None:
+    async def auto_disconnect(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
         """Handles automatic disconnection of the bot from voice"""
         # Ignore if update comes from bot
         if member == self.client.user:
@@ -136,9 +131,8 @@ class Voice(commands.Cog):
                 )
             )
 
-        result = await player.play(query)
-        if result.get("queued"):
-            song = result.get("song")
+        song = await player.play(query)
+        if player.is_playing:
             embed = discord.Embed(
                 colour=colors.pink,
                 description=f"Successfully added to queue by {interaction.user.mention}."
@@ -149,7 +143,10 @@ class Voice(commands.Cog):
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
-            await interaction.response.send_message(embed=embed, delete_after=10)
+            try:
+                await interaction.response.send_message(embed=embed, delete_after=10)
+            except Exception:
+                pass
 
     @app_commands.command(name="queue", description="View the list of queued songs")
     async def queue(self, interaction: discord.Interaction) -> None:

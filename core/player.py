@@ -276,8 +276,6 @@ class Player:
             self.__now_playing = None
             self.__is_playing = False
             logger.debug(f"Playback failed, queue might be empty (ID: {self.__ctx.guild.id})")
-
-        if not self.now_playing and not self.is_playing:
             self.loop.create_task(
                 self.__ui.clearPlayerControls(self)
             )
@@ -310,10 +308,7 @@ class Player:
             logger.debug(f"Started playback (ID: {self.__ctx.guild.id})")
             song = self.play_song(silent=silent)
 
-        return {
-            "queued": song in self.__queue,
-            "song": song if song else None
-        }
+        return song
 
     # Player control methods
     def set_volume(self, volume: int) -> float:
@@ -402,6 +397,7 @@ class Player:
     async def stop(self, interaction: Optional[discord.Interaction]=None) -> None:
         """Stop audio stream"""
         if self.__is_playing:
+            song = self.__now_playing
             self.__now_playing = None
             self.__queue.clear()
             logger.debug(f"Cleared queue (ID: {self.__ctx.guild.id})")
@@ -412,12 +408,12 @@ class Player:
                 await interaction.response.send_message(
                     embed=discord.Embed(
                         colour=colors.pink,
-                        description=f"Stopped 🎶 **{self.__now_playing.title}**."
+                        description=f"Stopped 🎶 **{song.title}**."
                     ),
                     delete_after=10
                 )
 
-            await self.__ui.renderNowPlaying(self)
+            await self.__ui.clearPlayerControls(self)
 
 class Music:
     """
@@ -498,22 +494,25 @@ class PlayerUI:
         )
 
     async def clearPlayerControls(self, player: Player):
-        await self.send(player, view=None)
+        await self.send(
+            player,
+            content=self.hook.content,
+            embeds=self.hook.embeds,
+            view=None
+        )
 
     async def send(self, player, **kwargs):
         if self.hook:
             self.hook = await self.hook.edit(
                 content      = kwargs.get("content"),
-                embed        = kwargs.get("embed"),
-                view         = kwargs.get("view", None),
-                delete_after = kwargs.get("delete_after")
+                embeds       = kwargs.get("embeds"),
+                view         = kwargs.get("view")
             )
             logger.debug(f"Updated message (ID: {self.hook.id} GUILD: {self.hook.guild.id})")
         else:
             self.hook = await player.channel.send(
                 content      = kwargs.get("content"),
                 embed        = kwargs.get("embed"),
-                view         = kwargs.get("view"),
-                delete_after = kwargs.get("delete_after")
+                view         = kwargs.get("view")
             )
             logger.debug(f"Added message (ID: {self.hook.id} GUILD: {self.hook.guild.id})")
