@@ -12,7 +12,6 @@ class PlayButton(Button):
     def __init__(self, player) -> None:
         super().__init__(label="Play", style=discord.ButtonStyle.primary)
         self.player = player
-        logger.debug(f"Created PlayButton object (ID: {self.player.channel.guild.id})")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         song = await self.player.resume()
@@ -29,7 +28,6 @@ class PauseButton(Button):
     def __init__(self, player):
         super().__init__(label="Pause", style=discord.ButtonStyle.success)
         self.player = player
-        logger.debug(f"Created PauseButton object (ID: {self.player.channel.guild.id})")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         song = await self.player.pause()
@@ -47,7 +45,6 @@ class PrevButton(Button):
         disabled = True if not player.last_song else False
         super().__init__(label="Prev", style=discord.ButtonStyle.primary, disabled=disabled)
         self.player = player
-        logger.debug(f"Created{' DISABLED ' if disabled else ' '}PrevButton object (ID: {self.player.channel.guild.id})")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         song = await self.player.prev()
@@ -64,7 +61,6 @@ class NextButton(Button):
         disabled = True if len(player.queue) < 2 else False
         super().__init__(label="Next", style=discord.ButtonStyle.primary, disabled=disabled)
         self.player = player
-        logger.debug(f"Created{' DISABLED ' if disabled else ' '}NextButton object (ID: {self.player.channel.guild.id})")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         song = await self.player.skip()
@@ -80,7 +76,6 @@ class StopButton(Button):
     def __init__(self, player):
         super().__init__(label="Stop", style=discord.ButtonStyle.danger)
         self.player = player
-        logger.debug(f"Created StopButton object (ID: {self.player.channel.guild.id})")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         song = await self.player.stop()
@@ -129,15 +124,19 @@ class PlayerUI:
 
         if not self.hook:
             self.hook = await channel.send(embed=embed, view=view)
+            logger.debug(f"Created screen for player (ID: {self.hook.guild.id})")
             return
         
         self.hook = await self.hook.edit(embed=embed, view=view)
+        logger.debug(f"Updated screen for player (ID: {self.hook.guild.id})")
 
     async def delete_screen(self):
         if not self.hook:
             return
         
+        logger.debug(f"Deleted screen for player (ID: {self.hook.guild.id})")
         await self.hook.delete()
+        self.hook = None
 
     async def refresh_controls(self, player, paused=False):
         if not self.hook:
@@ -146,6 +145,7 @@ class PlayerUI:
         self.hook = await self.hook.edit(
             view=player_controls(player, paused=paused)
         )
+        logger.debug(f"Updated controls for player (ID: {self.hook.guild.id})")
 
     async def remove_controls(self):
         if not self.hook:
@@ -154,3 +154,4 @@ class PlayerUI:
         self.hook = await self.hook.edit(
             view=None
         )
+        logger.debug(f"Removed controls for player (ID: {self.hook.guild.id})")
