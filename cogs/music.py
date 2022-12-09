@@ -63,12 +63,17 @@ class Voice(commands.Cog):
         user_count = len(guild.voice_client.channel.members)
         if user_count < 2:
             player = self.music.get_player(guild.id)
-            channel = player.get_channel()
+            channel = player.channel
 
             if player:
                 self.music.close_player(guild.id)
-                await send_notif(channel, Responses.bot_disconnect)
 
+            await channel.send(
+                embed=discord.Embed(
+                    colour=colors.pink,
+                    description=Responses.bot_disconnect
+                )
+            )
             await guild.voice_client.disconnect()
             logger.debug(f"Disconnected from voice in guild: ({guild.id})")
         else:
