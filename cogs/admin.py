@@ -63,8 +63,11 @@ class Admin(commands.Cog):
         flag: bool = True if Database(ctx.guild.id).get_access(ctx.author.id) >= level else False
 
         if not flag:
-            await send_error_message(
-                ctx, f"You must have at least access level **{level}** to use this command."
+            await ctx.send(
+                embed=discord.Embed(
+                    colour=red,
+                    description=f"You must have at least access level **{level}** to use this command."
+                )
             )
 
         return flag
@@ -87,8 +90,11 @@ class Admin(commands.Cog):
         config = self.client.config[ctx.guild.id]
         config.set('main', 'prefix', pref)
 
-        await send_notif(
-            ctx, f"Server prefix has been set to **[{pref}]**."
+        await ctx.send(
+            embed=discord.Embed(
+                colour=pink,
+                description=f"Server prefix has been set to **[{pref}]**."
+            )
         )
 
     @commands.command()
@@ -101,13 +107,19 @@ class Admin(commands.Cog):
         if not arg:
             config.delete(__name__, 'yae_channel')
             logger.debug(f"Disabled command checking for guild: {ctx.guild.id}")
-            await send_notif(
-                ctx, "This channel can now be used **freely**."
+            await ctx.send(
+                embed=discord.Embed(
+                    colour=pink,
+                    description="This channel can now be used **freely**."
+                )
             )
         else:
             config.set(__name__, 'yae_channel', f"{ctx.channel.id}")
-            await send_notif(
-                ctx, "This channel can now only be used for **Yae Miko commands**."
+            await ctx.send(
+                embed=discord.Embed(
+                    colour=red,
+                    description="This channel can now only be used for **Yae Miko commands**."
+                )
             )
             logger.debug(f"Enabled command checking in channel: {ctx.channel.id} for guild: {ctx.guild.id}")
 
@@ -117,38 +129,53 @@ class Admin(commands.Cog):
         db = Database(ctx.guild.id)
 
         if db.compare_access(ctx.author.id, member.id) == member.id or ctx.author == member:
-            await send_error_message(
-                ctx, "You cannot change the access level for this user."
+            await ctx.send(
+                embed=discord.Embed(
+                    colour=red,
+                    description="You cannot change the access level for this user."
+                )
             )
             return
         
         if access == 0:
             db.delete_user(member.id)
-            await send_notif(
-                ctx, f"Removed access for {member.nick if member.nick else member.name}."
+            await ctx.send(
+                embed=discord.Embed(
+                    colour=pink,
+                    description=f"Removed access for {member.nick if member.nick else member.name}."
+                )
             )
             logger.debug(f"Removed access for user: {member.id} in guild: {ctx.guild.id}")
             return
             
         db.update(member.id, access)
-        await send_notif(
-            ctx, f"Set **{member.nick if member.nick else member.name}'s** access to {access}"
+        await ctx.send(
+            embed=discord.Embed(
+                colour=pink,
+                description=f"Set **{member.nick if member.nick else member.name}'s** access to {access}"
+            )
         )
 
     @commands.command()
     async def sudo(self, ctx: commands.Context) -> None:
         """Gives bot owner highest access level (for debugging)"""
         if ctx.author.id != 200034086444597248:
-            await send_error_message(
-                ctx, "Only the bot owner is authorized to use this command."
+            await ctx.send(
+                embed=discord.Embed(
+                    colour=red,
+                    description="Only the bot owner is authorized to use this command."
+                )
             )
             return
 
         db = Database(ctx.guild.id)
         db.update(200034086444597248, 5)
 
-        await send_notif(
-            ctx, "You have been given the maximum access level.",
+        await ctx.send(
+            embed=discord.Embed(
+                colour=pink,
+                description="You have been given the maximum access level."
+            )
         )
 
     # restart the bot
@@ -158,9 +185,13 @@ class Admin(commands.Cog):
         if not await self.has_access(ctx, levels["restart"]):
             return
 
-        await send_notif(
-            ctx, f"The **restart** command has been issued by **{ctx.author.nick if ctx.author.nick else ctx.author.name}**"
+        await ctx.send(
+            embed=discord.Embed(
+                colour=pink,
+                description=f"The **restart** command has been issued by **{ctx.author.nick if ctx.author.nick else ctx.author.name}**"
+            )
         )
+
         await self.client.close()
 
     # echoes the message sent by the author
