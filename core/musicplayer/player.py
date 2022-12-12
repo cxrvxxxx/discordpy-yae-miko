@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union
 
 import discord
 from discord.ext import commands
