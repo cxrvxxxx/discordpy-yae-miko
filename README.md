@@ -4,6 +4,7 @@ A feature-packed Discord Bot built using __Python__.
 Invite **Yae Miko** to your Discord server using [this link](https://discord.com/api/oauth2/authorize?client_id=904245816552742922&permissions=1789390220887&scope=bot%20applications.commands)
 
 # Self-Hosting
+Note: It is not recommended to host your own instance of this bot as further updates will not be automatically installed.
 
 ## Requirements
 1. [Python 3.10.7+](https://www.python.org/downloads/)
