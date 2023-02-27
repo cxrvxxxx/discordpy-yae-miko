@@ -1,15 +1,15 @@
-## Yae Miko - DIscord Bot
+# Yae Miko - DIscord Bot
 A feature-packed Discord Bot built using __Python__.
 
 Invite **Yae Miko** to your Discord server using [this link](https://discord.com/api/oauth2/authorize?client_id=904245816552742922&permissions=1789390220887&scope=bot%20applications.commands)
 
-## Self-Hosting
+# Self-Hosting
 
-# Requirements
+## Requirements
 1. [Python 3.10.7+](https://www.python.org/downloads/)
 2. [FFMPEG](https://ffmpeg.org/)
 
-# Libraries/Frameworks
+## Libraries/Frameworks
 1. [python-dotenv 0.21.0+](https://pypi.org/project/python-dotenv/)
 2. [discord.py 2.1.0+](https://pypi.org/project/discord.py/)
 3. [youtube_dl 2021.12.17](https://pypi.org/project/youtube_dl/)
