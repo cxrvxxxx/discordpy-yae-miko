@@ -16,13 +16,9 @@ from discord.ext import commands
 from discord import app_commands
 
 # Core imports
-import logsettings
 from core import colors
 from core.musicplayer import music
 from core.message import send_error_message, send_notif, Responses
-
-# Logger
-logger = logsettings.logging.getLogger("musicplayer")
 
 # default config values
 settings = {
@@ -56,7 +52,7 @@ class Voice(commands.Cog):
         if not guild.voice_client:
             return
 
-        logger.debug(f"Started auto-disconnect timer in guild: ({guild.id}).")
+        self.client.logger.debug(f"Started auto-disconnect timer in guild: ({guild.id}).")
         # Delay before the bot disconnects
         await asyncio.sleep(10)
 
@@ -75,9 +71,9 @@ class Voice(commands.Cog):
                 )
             )
             await guild.voice_client.disconnect()
-            logger.debug(f"Disconnected from voice in guild: ({guild.id})")
+            self.client.logger.debug(f"Disconnected from voice in guild: ({guild.id})")
         else:
-            logger.debug(f"Finished timer in guild: ({guild.id}), aborting auto-disconnect")
+            self.client.logger.debug(f"Finished timer in guild: ({guild.id}), aborting auto-disconnect")
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -514,7 +510,7 @@ class Voice(commands.Cog):
             try:
                 number = int(number) - 1
             except ValueError:
-                logger.debug(f"Failed to convert {number} to integer type")
+                self.client.logger.debug(f"Failed to convert {number} to integer type")
                 await send_error_message(
                     ctx,
                     Responses.msuic_player_fav_invalid
@@ -555,7 +551,3 @@ class Voice(commands.Cog):
         )
 
         await ctx.invoke(self.client.get_command("nowplaying"))
-
-async def setup(client: commands.Bot) -> None:
-    """Adds the cog to the client"""
-    await client.add_cog(Voice(client))

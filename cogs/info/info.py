@@ -25,6 +25,3 @@ class Info(commands.Cog):
                 colour = colors.pink
             )
         )
-
-async def setup(client):
-    await client.add_cog(Info(client))

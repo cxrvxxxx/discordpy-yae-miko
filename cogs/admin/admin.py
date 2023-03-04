@@ -9,13 +9,9 @@ import discord
 from discord.ext import commands
 
 # Core imports
-import logsettings
 from core.model import Database
 from core.colors import *
-from core.message import send_error_message, send_notif
-
-# Logger
-logger = logsettings.logging.getLogger("bot.admin")
+from core.message import send_error_message
 
 # TODO: Dynamically assign this from file
 levels = {
@@ -50,7 +46,7 @@ class Admin(commands.Cog):
         # Checking if the command starts with the prefix
         pref = self.client.prefix(self.client, message)
         if message.content.startswith(pref):
-            logger.debug(f"Command {ctx.command.name} invoked in {ctx.guild.id}")
+            self.client.logger.debug(f"Command {ctx.command.name} invoked in {ctx.guild.id}")
             return
 
         await message.delete()
@@ -106,7 +102,7 @@ class Admin(commands.Cog):
 
         if not arg:
             config.delete(__name__, 'yae_channel')
-            logger.debug(f"Disabled command checking for guild: {ctx.guild.id}")
+            self.client.logger.debug(f"Disabled command checking for guild: {ctx.guild.id}")
             await ctx.send(
                 embed=discord.Embed(
                     colour=pink,
@@ -121,7 +117,7 @@ class Admin(commands.Cog):
                     description="This channel can now only be used for **Yae Miko commands**."
                 )
             )
-            logger.debug(f"Enabled command checking in channel: {ctx.channel.id} for guild: {ctx.guild.id}")
+            self.client.logger.debug(f"Enabled command checking in channel: {ctx.channel.id} for guild: {ctx.guild.id}")
 
     @commands.command(aliases=["sa"])
     async def setaccess(self, ctx: commands.Context, member: discord.Member, access: int = 0) -> None:
@@ -145,7 +141,7 @@ class Admin(commands.Cog):
                     description=f"Removed access for {member.nick if member.nick else member.name}."
                 )
             )
-            logger.debug(f"Removed access for user: {member.id} in guild: {ctx.guild.id}")
+            self.client.logger.debug(f"Removed access for user: {member.id} in guild: {ctx.guild.id}")
             return
             
         db.update(member.id, access)
@@ -224,20 +220,17 @@ class Admin(commands.Cog):
             ctx.bot.tree.copy_global_to(guild=guild)
 
         try:
-            logger.debug("Sync started")
+            self.client.logger.debug("Sync started")
             synced = await ctx.bot.tree.sync(guild=None if do_global else guild)
         except discord.HTTPException:
-            logger.debug("An error occurred while syncing application commands")
+            self.client.logger.debug("An error occurred while syncing application commands")
         finally:
-            logger.debug("Sync finished")
+            self.client.logger.debug("Sync finished")
 
-        logger.debug(f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}")
+        self.client.logger.debug(f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}")
         await ctx.send(
             embed=discord.Embed(
                 colour=pink,
                 description=f"Synced {len(synced)} command{'s' if len(synced) > 1 else ''}{' globally.' if do_global else '.'}"
             )
         )
-
-async def setup(client):
-    await client.add_cog(Admin(client))
