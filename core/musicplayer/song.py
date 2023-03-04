@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, Union
 
 import aiohttp
-import youtube_dl
+import yt_dlp
 
 logger = logging.getLogger("musicplayer")
 
@@ -52,8 +52,8 @@ async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
                 if html[i] == '"':
                     break
                 src += html[i]
-
-        ytdl = youtube_dl.YoutubeDL(YDL_OPTIONS)
+        
+        ytdl = yt_dlp.YoutubeDL(YDL_OPTIONS)
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(src, download = False))
         logger.debug(f"Extracted video data from URL {src}")
 
