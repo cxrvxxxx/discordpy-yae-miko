@@ -1,10 +1,9 @@
 import logging
 
 from discord.ext import commands
-from . import player
+from .player import Player
 
 logger = logging.getLogger("musicplayer")
-Player = player.Player
 
 class Music:
     def __init__(self) -> None:

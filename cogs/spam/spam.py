@@ -81,6 +81,3 @@ class Message:
     def __init__(self, message, time):
         self.message = message
         self.time = time
-
-async def setup(client):
-    await client.add_cog(AntiSpam(client))
