@@ -12,7 +12,7 @@ from modules import INSTALLED_MODULES
 # Version information
 VERSION_INFO = {
     "PROJECT_NAME"    : "Yae Miko - Discord Bot [discord.py]",
-    "VERSION"         : "1.4.3",
+    "VERSION"         : "1.5.0",
     "AUTHOR"          : "cxrvxxxx",
     "REPO_URL"        : "https://github.com/cxrvxxxx/yae-miko",
     "TEST_GUILD_ID"   : 907119292410130433,
