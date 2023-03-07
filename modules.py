@@ -5,4 +5,5 @@ INSTALLED_MODULES = [
     'cogs.music',
     'cogs.slash',
     'cogs.spam',
+    'cogs.game',
 ]
