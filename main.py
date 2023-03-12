@@ -1,20 +1,19 @@
 """
-Project name: Yae Miko - Discord Bot [discord.py]
-Author: cxrvxxx
-Repository URL: https://github.com/cxrvxxx/yae-miko
-Description: A feature-packed Discord bot using discord.py
+This file contains the code for starting an instance
+of the bot.
 """
 import os
+import version
 from dotenv import load_dotenv
 from core.bot import YaeMiko
 from modules import INSTALLED_MODULES
 
 # Version information
 VERSION_INFO = {
-    "PROJECT_NAME"    : "Yae Miko - Discord Bot [discord.py]",
-    "VERSION"         : "1.5.0",
-    "AUTHOR"          : "cxrvxxxx",
-    "REPO_URL"        : "https://github.com/cxrvxxxx/yae-miko",
+    "PROJECT_NAME"    : version.APP_NAME,
+    "VERSION"         : version.__version__,
+    "AUTHOR"          : version.__author__,
+    "REPO_URL"        : version.__url__,
     "TEST_GUILD_ID"   : 907119292410130433,
 }
 

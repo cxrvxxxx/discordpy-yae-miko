@@ -1,3 +1,7 @@
+"""
+This file contains the Music class which manages
+instances of the music player.
+"""
 import logging
 
 from discord.ext import commands
