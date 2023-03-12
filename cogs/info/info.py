@@ -1,3 +1,6 @@
+"""
+A module for informative commands
+"""
 import discord
 
 from discord.ext import commands
@@ -9,6 +12,7 @@ class Info(commands.Cog):
 
     @commands.command()
     async def info(self, ctx):
+        """Displays information about the bot"""
         pf = self.client.prefix(self.client, ctx.message)
         await ctx.send(
             embed = discord.Embed(

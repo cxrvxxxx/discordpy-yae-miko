@@ -95,6 +95,7 @@ class Admin(commands.Cog):
 
     @commands.command()
     async def yaechannel(self, ctx: commands.Context, arg: bool = True) -> None:
+        """Enables/disables commands-only mode for text channels"""
         if not await self.has_access(ctx, levels['yaechannel']):
             return
 

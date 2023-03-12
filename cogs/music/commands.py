@@ -1,9 +1,5 @@
 """
-Music Cog
-
-Commands
-----------
-
+A module for playing music in voice channels
 """
 # Standard imports
 import os
