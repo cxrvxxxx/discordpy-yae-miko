@@ -4,7 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .game import Game
-from .colors import default, danger, success, warn
+from .values.colors import default, danger, success, warn
 
 class MonaHeist(commands.Cog):
     def __init__(self, client):
