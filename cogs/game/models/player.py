@@ -1,70 +1,38 @@
 import sqlite3 as sql
 
-from typing import Union
+from typing import List, Any
 from abc import ABCMeta
 
-from ..objects.player import Player
 from ..settings import SAVEFILE_PATH
-from ..factories.player_factory import PlayerFactory
-from ..exceptions.player_exceptions import *
 
 class PlayerModel(ABCMeta):
     @staticmethod
-    def get_player(uid: int) -> Union[Player, None]:
+    def get_player(uid: int) -> List[Any]:
         conn = sql.connect(SAVEFILE_PATH)
         c = conn.cursor()
 
         c.execute("SELECT * FROM players WHERE id=?", (uid,))
         data = c.fetchone()
 
-        if not data:
-            raise PlayerNotFoundException(f"Cannot find player with ID {uid}")
+        conn.close()
 
-        return PlayerFactory.create_player(*data)
+        return data
 
     @staticmethod
-    def create_player(uid, player_name, **kwargs) -> Player:
-        player = PlayerModel.get_player(uid)
-
-        if player:
-            raise PlayerCreateException("Player is already exists.")
-
+    def create_player(player_data) -> None:
         conn = sql.connect(SAVEFILE_PATH)
         c = conn.cursor()
 
         c.execute(
-            "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                uid,
-                player_name,
-                kwargs.get('bio'),
-                kwargs.get('level', 1),
-                kwargs.get('experience', 0),
-                kwargs.get('cash', 0),
-                kwargs.get('hitpoints', 100),
-                kwargs.get('energy', 160),
-                kwargs.get('group_id'),
-                kwargs.get('is_developer', 0),
-                kwargs.get('is_moderator', 0),
-                kwargs.get('dev_level', 0),
-                kwargs.get('mod_level', 0),
-            )
+            "INSERT INTO players VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (*player_data,)
         )
 
         conn.commit()
         conn.close()
-
-        player = PlayerModel.get_player(uid)
-
-        return player
     
     @staticmethod
-    def update_player(player: Player) -> Player:
-        existing_player = PlayerModel.get_player(player.player_id)
-
-        if not existing_player:
-            raise PlayerNotFoundException("Cannot update a non-existing player.")
-        
+    def update_player(**player_data) -> None:
         conn = sql.connect(SAVEFILE_PATH)
         c = conn.cursor()
 
@@ -85,24 +53,8 @@ class PlayerModel(ABCMeta):
                 mod_level=:mod_level
             WHERE
                 id=:id""",
-            {
-                'id': player.player_id,
-                'player_name': player.name,
-                'bio': player.bio,
-                'level': player.level,
-                'experience': player.experience,
-                'cash': player.cash,
-                'hitpoints': player.hitpoints,
-                'energy': player.energy,
-                'group_id': player.group_id,
-                'is_developer': player.is_developer,
-                'is_moderator': player.is_moderator,
-                'dev_level': player.dev_level,
-                'mod_level': player.mod_level
-            })
+            {**player_data}
+        )
         
         conn.commit()
         conn.close()
-
-        existing_player = PlayerModel.get_player(player.player_id)
-        return existing_player

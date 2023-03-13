@@ -74,7 +74,7 @@ c.execute("""CREATE TABLE IF NOT EXISTS shop_listings (
     price INTEGER,
     close_time DATETIME,
     FOREIGN KEY (shop_id) REFERENCES shops(id),
-    FOREIGN KEY (item_id) REFRENCES items(id)
+    FOREIGN KEY (item_id) REFERENCES items(id)
 )""")
 
 conn.commit()
