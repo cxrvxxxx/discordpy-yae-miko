@@ -1,4 +1,4 @@
-from .commands import MonaHeist
+from .main import MonaHeist
 
-async def setup(client):
+async def setup(client) -> None:
     await client.add_cog(MonaHeist(client))
