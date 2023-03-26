@@ -17,3 +17,14 @@ class PlayerController(object):
         PlayerModel.save_player(player)
 
         return Response(True, data={'player': player})
+    
+    @staticmethod
+    def profile(uid: int) -> None:
+        player_data = PlayerModel.get_player(uid)
+
+        if not player_data:
+            return Response(False, message="No data.")
+        
+        player = Player(*player_data)
+
+        return Response(True, data={'player': player})

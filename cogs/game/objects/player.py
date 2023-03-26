@@ -133,3 +133,23 @@ class Player(object):
             'dev_level': self.dev_level,
             'mod_level': self.mod_level
         }
+
+    def account_info(self) -> Dict[str, Any]:
+        return {
+            'Level': self.level,
+            'Experience': self.experience,
+            'Cash': f'${self.cash}',
+        }
+    
+    def char_stats(self) -> Dict[str, Any]:
+        return {
+            'HP': self.hitpoints,
+            'Energy': self.energy,
+        }
+    
+    def affiliations(self) -> Dict[str, Any]:
+        return {
+            'Group': self.group_id,
+            'Developer': "Yes" if self.is_developer else "No",
+            "Moderator": "Yes" if self.is_moderator else "No"
+        }
