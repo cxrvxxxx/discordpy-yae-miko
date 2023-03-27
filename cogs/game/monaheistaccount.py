@@ -1,11 +1,11 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from .monaheist import MonaHeist
+from .colors import *
 from .controller.playercontroller import PlayerController
+from .monaheist import MonaHeist
 from .objects.player import Player
 from .objects.response import Response
-from .colors import *
 
 class MonaHeistAccount(MonaHeist):
     def __init__(self, client: commands.Bot):
@@ -98,7 +98,7 @@ class MonaHeistAccount(MonaHeist):
         embed = discord.Embed(
             color=pink,
             title=f"{player.player_name}'s profile",
-            description=interaction.user.mentions
+            description=member.mention
         )
         embed.add_field(
             name="Bio",
