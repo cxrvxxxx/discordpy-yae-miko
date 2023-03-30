@@ -180,7 +180,7 @@ class Player:
 
         return self.now_playing
 
-    async def play(self, query: str, interaction: discord.Interaction = None) -> Dict[str, Union[bool, Song]]:
+    async def play(self, query: str, interaction: discord.Interaction) -> Dict[str, Union[bool, Song]]:
         """Entry point for playing audio"""
         for i in range(1, 3 + 1):
             song = await fetch_track(query, self.loop)
@@ -196,7 +196,7 @@ class Player:
             logger.debug(f"Queued track (ID: {self.ctx.guild.id})")
 
         if self.is_playing:
-            self.loop.create_task(self.ui.send_queue_msg(interaction, song))
+            await self.ui.send_queue_msg(interaction, song)
             self.update_ui()
 
         if not self.is_playing and song:

@@ -130,7 +130,7 @@ class MusicCommands(commands.Cog):
                 )
             )
 
-        song = await player.play(query, interaction=interaction if player.is_playing else None)
+        await player.play(query, interaction)
 
     @app_commands.command(name="queue", description="View the list of queued songs")
     async def queue(self, interaction: discord.Interaction) -> None:
