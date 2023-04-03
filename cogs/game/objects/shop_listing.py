@@ -1,38 +1,23 @@
+from __future__ import annotations
 from dataclasses import dataclass
+from typing import Dict, Any
+from datetime import datetime
 
 @dataclass
 class ShopListing(object):
-    _id: int
-    _shop_id: int
-    _item_id: int
-    _price: int
-    _close_time: object #TODO: set to DateTime object
+    shop_listing_id: int
+    perk_id: int
+    shop_id: int
+    stock: int
+    price: int
+    added_date: datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    @property
-    def listing_id(self) -> int:
-        return self._id
-    
-    @property
-    def shop_id(self) -> int:
-        return self._shop_id
-    
-    @property
-    def item_id(self) -> int:
-        return self._item_id
-    
-    @property
-    def price(self) -> int:
-        return self._price
-    
-    @price.setter
-    def price(self, value: int) -> None:
-        self._price = value
-
-    @property
-    def close_time(self) -> object: #TODO: set tp DateTime object
-        return self._close_time
-    
-    @close_time.setter
-    def close_time(self, datetime: object) -> None:
-        self._close_time = datetime
-    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'shopListingId': self.shop_listing_id,
+            'perkId': self.perk_id,
+            'shopId': self.shop_id,
+            'stock': self.stock,
+            'price': self.price,
+            'addedDate': self.added_date
+        }
