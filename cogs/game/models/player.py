@@ -1,15 +1,9 @@
 from typing import Union
-import os
-import json
 import mysql.connector as mysql
-from datetime import datetime
 from ..objects.player import Player
+from .abc_model import AbstractModel
 
-class PlayerModel(object):
-    def __init__(self):
-        with open(os.path.join(os.path.dirname(__file__), '..', 'mysql_config.json'), 'r') as f:
-            self.MYSQL_CONFIG = json.load(f)
-
+class PlayerModel(AbstractModel):
     def get_player(self, player_id: int) -> Union[Player, None]:
         with mysql.connect(**self.MYSQL_CONFIG) as conn:
             c = conn.cursor()
