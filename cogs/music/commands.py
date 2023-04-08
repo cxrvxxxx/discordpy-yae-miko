@@ -16,7 +16,7 @@ from core import colors
 from core.message import send_error_message, send_notif, Responses
 
 # Package iports
-from .music import Music
+from .classes.music import Music
 
 # default config values
 settings = {
@@ -103,7 +103,7 @@ class MusicCommands(commands.Cog):
 
         player = self.music.get_player(interaction.guild_id)
 
-        if player and interaction.channel != player.channel:
+        if player and interaction.channel != player.ctx.channel:
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=colors.red,
@@ -130,7 +130,7 @@ class MusicCommands(commands.Cog):
                 )
             )
 
-        await player.play(query, interaction)
+        await player.play(query)
 
     @app_commands.command(name="queue", description="View the list of queued songs")
     async def queue(self, interaction: discord.Interaction) -> None:
@@ -147,7 +147,7 @@ class MusicCommands(commands.Cog):
             )
             return
 
-        if player and interaction.channel != player.channel:
+        if player and interaction.channel != player.ctx.channel:
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=colors.red,

@@ -42,7 +42,17 @@ LOGGING_CONFIG = {
             "level"     : "INFO",
             "propagate" : False
         },
-        "musicplayer"   : {
+        "music.song"   : {
+            "handlers"  : ["console"],
+            "level"     : "DEBUG",
+            "propagate" : False
+        },
+        "music.player"   : {
+            "handlers"  : ["console"],
+            "level"     : "DEBUG",
+            "propagate" : False
+        },
+        "music.player.ui"   : {
             "handlers"  : ["console"],
             "level"     : "DEBUG",
             "propagate" : False

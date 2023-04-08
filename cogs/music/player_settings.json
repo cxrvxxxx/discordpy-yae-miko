@@ -1,0 +1,4 @@
+{
+    "voice_auto_disconnect": true,
+    "disconnect_timeout": 60
+}
