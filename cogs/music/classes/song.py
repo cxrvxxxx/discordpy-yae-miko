@@ -1,39 +1,33 @@
-import logging
+from dataclasses import dataclass
+
 import asyncio
-from typing import Dict, Union
+import logging
+import json
+import os
 
 import aiohttp
 import yt_dlp
 
-logger = logging.getLogger("musicplayer")
-
-YDL_OPTIONS : Dict[str, Union[str, int]] = {
-    "format": "bestaudio/best",
-    "restrictfilenames": True,
-    "noplaylist": True,
-    "nocheckcertificate": True,
-    "ignoreerrors": True,
-    "logtostderr": False,
-    "quiet": True,
-    "no_warnings": True,
-    "source_address": "0.0.0.0"
-}
-
+@dataclass(frozen=True)
 class Song:
-    def __init__(self, source: str, title: str, author: str, url: str, thumbnail: str):
-        self.source    : str = source
-        self.title     : str = title
-        self.author    : str = author
-        self.url       : str = url
-        self.thumbnail : str = thumbnail
+    source: str
+    title: str
+    author: str
+    url: str
+    thumbnail: str
+
+    def __str__(self) -> str:
+        return self.title
 
 async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
         """Process query and returns a song instance"""
-        # skip process if user passed a youtube URL
+        # Logger
+        logger = logging.getLogger("music.song")
+        # Skip process if user passed a youtube URL
         if query.startswith("https://www.youtube.com/watch?v="):
             src = query
             logger.debug(f"Received video URL '{query}', parsing skipped")
-        # otherwise, process query to get a yotuube link
+        # Otherwise, process query to get a yotuube link
         else:
             search_url = "https://www.youtube.com/results?search_query="
             for key in query.split():
@@ -52,6 +46,9 @@ async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
                 if html[i] == '"':
                     break
                 src += html[i]
+
+        with open(os.path.join(os.path.dirname(__file__), '..', 'ydl_options.json'), 'r') as f:
+            YDL_OPTIONS = json.load(f)
         
         ytdl = yt_dlp.YoutubeDL(YDL_OPTIONS)
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(src, download = False))

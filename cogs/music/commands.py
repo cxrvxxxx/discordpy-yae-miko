@@ -16,7 +16,7 @@ from core import colors
 from core.message import send_error_message, send_notif, Responses
 
 # Package iports
-from .music import Music
+from .classes.music import Music
 
 # default config values
 settings = {
@@ -161,7 +161,7 @@ class MusicCommands(commands.Cog):
 
         queue = player.queue
 
-        if not queue:
+        if queue.is_empty():
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=colors.red,
@@ -173,44 +173,35 @@ class MusicCommands(commands.Cog):
 
         embed = discord.Embed(
             colour=colors.pink,
-            description=f"Now playing in **{player.channel.name}**"
+            description=f"🎶 Up Next in **{player.channel.name}**"
         )
         embed.set_thumbnail(
-            url=queue[0].thumbnail
+            url=queue.items[0].thumbnail
         )
         embed.set_author(
-                name=f"{queue[0].title}",
+                name=f"{queue.items[0].title}",
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
 
-        songs = "There are no songs in the queue."
-
-        if len(queue) > 1:
+        if queue.size() > 1:
             songs = ""
             overflow = 0
 
-            for index, song in enumerate(queue):
-                if index == 0:
-                    continue
-
-                line = f"\n `{index}` {song.title}"
+            for index, song in enumerate(queue.items[1:], 2):
                 if index < 10:
-                    songs += line
-                else:
-                    overflow += 1
+                    songs += f"\n `{index}` {song.title}"
+                    continue
+                
+                overflow += 1
 
             if overflow > 0:
                 songs += f"\n\n...and **` {overflow} `** more songs."
 
-        embed.add_field(
-            name="🎶 Up Next...",
-            value=songs,
-            inline=False
-        )
-
-        embed.set_footer(
-            text=f"If you like this song, use '/fave' to add this to your favorites!"
-        )
+            embed.add_field(
+                name="More tracks",
+                value=songs,
+                inline=False
+            )
 
         await interaction.response.send_message(embed=embed, delete_after=10)
 
@@ -243,10 +234,9 @@ class MusicCommands(commands.Cog):
             )
             return
 
-        song = player.dequeue(index)
         queue = player.queue
 
-        if not queue:
+        if queue.is_empty():
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=colors.red,
@@ -255,6 +245,8 @@ class MusicCommands(commands.Cog):
                 delete_after=10
             )
             return
+
+        song = queue.dequeue(index - 1)
 
         embed = discord.Embed(
             colour=colors.pink,
@@ -267,26 +259,6 @@ class MusicCommands(commands.Cog):
                 name=f"{song.title}",
                 icon_url="https://i.imgur.com/rcXLQLG.png"
             )
-
-        songs = ""
-        if len(queue) <= 1:
-            songs = "There are no songs in the queue."
-        else:
-            for idx, song in enumerate(queue):
-                if idx == 0:
-                    pass
-                else:
-                    songs = songs + f"\n `{idx}` {song.title}"
-
-        embed.add_field(
-            name="🎶 Up Next...",
-            value=songs,
-            inline=False
-        )
-
-        embed.set_footer(
-            text=f"If you like this song, use '/fave' to add this to your favorites!"
-        )
 
         await interaction.response.send_message(embed=embed, delete_after=10)
 
