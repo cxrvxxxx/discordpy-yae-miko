@@ -1,0 +1,11 @@
+{
+    "format": "bestaudio/best",
+    "restrictfilenames": true,
+    "noplaylist": true,
+    "nocheckcertificate": true,
+    "ignoreerrors": true,
+    "logtostderr": true,
+    "quiet": true,
+    "no_warnings": true,
+    "source_address": "0.0.0.0"
+}

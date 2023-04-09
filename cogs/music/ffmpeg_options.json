@@ -1,0 +1,4 @@
+{
+    "options": "-vn -loglevel quiet -hide_banner -nostats",
+    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 0 -nostdin"
+}
