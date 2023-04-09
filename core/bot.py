@@ -76,6 +76,17 @@ class YaeMiko(commands.Bot):
             config_path = f'./config/{guild.id}.ini'
             self.config[guild.id] = Config(config_path)
             self.config[guild.id].set('main', 'name', guild.name)
+    
+    async def on_guild_join(self, guild: discord.Guild) ->None:
+        """Application commands sync for newly joined guilds"""
+        self.tree.copy_global_to(guild=guild)
+        try:
+            self.logger.debug(f'Syncing commands for newly joined guild: {guild.id}')
+            synced = await self.tree.sync(guild=guild)
+        except discord.HTTPException:
+            self.logger.debug("An error occurred while syncing application commands")
+        finally:
+            self.logger.debug(f"Sync finished ({len(synced)} commands)")
 
     async def close(self) -> None:
         """Bot shutdown"""
