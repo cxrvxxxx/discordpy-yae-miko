@@ -1,0 +1,4 @@
+{
+    "enable_auto_disconnect": true,
+    "auto_disconnect_timeout": 60
+}

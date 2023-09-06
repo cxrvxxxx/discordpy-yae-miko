@@ -2,9 +2,10 @@
 A module for playing music in voice channels
 """
 # Standard imports
-import os
 import asyncio
-from typing import Dict
+import json
+import logging
+import os
 
 # Third-party library imports
 import discord
@@ -18,11 +19,6 @@ from core.message import send_error_message, send_notif, Responses
 # Package iports
 from .classes.music import Music
 
-# default config values
-settings = {
-    'voice_auto_disconnect': 'True'
-}
-
 # init dir
 if not os.path.exists('playlists'):
     os.mkdir('playlists')
@@ -31,18 +27,21 @@ class MusicCommands(commands.Cog):
     """Command class"""
     def __init__(self, client: commands.Bot) -> None:
         self.client = client
-        self.config = client.config
+        self.logger = logging.getLogger("music.commands")
         self.music  = Music()
+        
+        with open(os.path.join(os.path.dirname(__file__), 'ydl_options.json'), 'r') as f:
+            self.MUSIC_SETTINGS = json.load(f)
 
     async def auto_disconnect(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
         """Handles automatic disconnection of the bot from voice"""
-        # Ignore if update comes from bot
-        if member == self.client.user:
-            return
+        # Settings
+        feautre_enabled = self.MUSIC_SETTINGS.get("enable_auto_disconnect")
+        timeout = self.MUSIC_SETTINGS.get("auto_disconnect_timeout")
 
-        # Checking if auto-disconnect is enabled
-        feature_enabled = self.config[member.guild.id].getboolean(__name__, 'voice_auto_disconnect')
-        if not before and after and not feature_enabled:
+        print(feautre_enabled, timeout)
+
+        if not feautre_enabled:
             return
 
         guild = self.client.get_guild(member.guild.id)
@@ -50,9 +49,9 @@ class MusicCommands(commands.Cog):
         if not guild.voice_client:
             return
 
-        self.client.logger.debug(f"Started auto-disconnect timer in guild: ({guild.id}).")
+        self.logger.debug(f"Started auto-disconnect timer in guild: ({guild.id}).")
         # Delay before the bot disconnects
-        await asyncio.sleep(10)
+        await asyncio.sleep(timeout)
 
         user_count = len(guild.voice_client.channel.members)
         if user_count < 2:
@@ -69,23 +68,21 @@ class MusicCommands(commands.Cog):
                 )
             )
             await guild.voice_client.disconnect()
-            self.client.logger.debug(f"Disconnected from voice in guild: ({guild.id})")
+            self.logger.debug(f"Disconnected from voice in guild: ({guild.id})")
         else:
-            self.client.logger.debug(f"Finished timer in guild: ({guild.id}), aborting auto-disconnect")
+            self.logger.debug(f"Finished timer in guild: ({guild.id}), aborting auto-disconnect")
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         """Cog set-up function when added to client"""
-        # Save { settings } to file
-        for guild in self.client.guilds:
-            for key, value in settings.items():
-                if not self.config[guild.id].get(__name__, key):
-                    self.config[guild.id].set(__name__, key, value)
+        pass
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
         """Called when a user updates their voice state"""
-        await self.auto_disconnect(member, before, after)
+        # For updates thaat do not come from the bot
+        if member != self.client.user:
+            await self.auto_disconnect(member, before, after)
 
     @app_commands.command(name="play", description="Connect to voice and play something.")
     @app_commands.describe(query="Title or URL of audio to be played")
@@ -465,7 +462,7 @@ class MusicCommands(commands.Cog):
             try:
                 number = int(number) - 1
             except ValueError:
-                self.client.logger.debug(f"Failed to convert {number} to integer type")
+                self.logger.debug(f"Failed to convert {number} to integer type")
                 await send_error_message(
                     ctx,
                     Responses.msuic_player_fav_invalid
