@@ -1,4 +1,4 @@
 {
     "enable_auto_disconnect": true,
-    "auto_disconnect_timeout": 300
+    "auto_disconnect_timeout": 180
 }

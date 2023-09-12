@@ -155,9 +155,7 @@ class Player:
             song = await fetch_track(query, self.loop)
 
             if song:
-                self.logger.debug(f"Video data fetched (ID: {self.ctx.guild.id})")
                 self.queue.enqueue(song)
-                self.logger.debug(f"Queued track (ID: {self.ctx.guild.id})")
 
                 if self.ui.screen:
                     await self.ui.send_queue_msg(interaction, song)
@@ -166,6 +164,8 @@ class Player:
                 if not self.is_playing:
                     song = self.play_song()
                     self.logger.debug(f"Started playback (ID: {self.ctx.guild.id})")
+                else:
+                    self.logger.debug(f"Queued track (ID: {self.ctx.guild.id})")
 
                 break
 
