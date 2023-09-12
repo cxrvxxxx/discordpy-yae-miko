@@ -2,9 +2,9 @@
 This file contains the code for starting an instance
 of the bot.
 """
-import os
 import version
-from dotenv import load_dotenv
+import json
+
 from core.bot import YaeMiko
 from modules import INSTALLED_MODULES
 
@@ -20,8 +20,8 @@ VERSION_INFO = {
 
 # Running the bot.
 if __name__ == "__main__":
-    load_dotenv()
-    TOKEN = os.getenv('TOKEN')
+    with open("secrets.json", 'r') as f:
+        TOKEN = json.load(f).get("token")
 
     client = YaeMiko(version=VERSION_INFO, modules=INSTALLED_MODULES)
     client.run(TOKEN, root_logger=True)
