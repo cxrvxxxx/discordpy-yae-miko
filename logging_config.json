@@ -1,0 +1,49 @@
+{
+    "version": 1,
+    "disabled_existing_loggers": false,
+    "formatters": {
+        "verbose": {
+            "format": "%(levelname)-7s - %(asctime)s - %(module)-24s : %(message)s"
+        },
+        "standard": {
+            "format": "%(levelname)-7s - %(name)-24s : %(message)s"
+        }
+    },
+    "handlers": {
+        "debugHandler": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "standard"
+        },
+        "warnHandler": {
+            "level": "WARNING",
+            "class": "logging.StreamHandler",
+            "formatter": "standard"
+        },
+        "fileHandler": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "formatter": "verbose",
+            "filename": "logs/discord.log",
+            "mode": "w"
+        }
+    },
+    "loggers": {
+        "yaemiko": {
+            "handlers": [
+                "debugHandler",
+                "fileHandler"
+            ],
+            "level": "DEBUG",
+            "propagate": false
+        },
+        "discord": {
+            "handlers": [
+                "warnHandler",
+                "fileHandler"
+            ],
+            "level": "INFO",
+            "propagate": false
+        }
+    }
+}

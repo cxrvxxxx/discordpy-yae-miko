@@ -1,4 +1,6 @@
-"""Guild settings config handler"""
+"""NOTICE: THIS MODULE HAS BEEN DEPRECATED
+
+Guild settings config handler"""
 import os
 
 from configparser import ConfigParser

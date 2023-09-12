@@ -30,7 +30,7 @@ class PlayerUI:
     def __init__(self, channel: discord.TextChannel):
         self.__channel: discord.TextChannel = channel
         self.__screen: discord.Message = None
-        self.__logger: logging.Logger = logging.getLogger("music.player.ui")
+        self.__logger: logging.Logger = logging.getLogger("yaemiko.music.ui")
 
     @property
     def channel(self) -> discord.TextChannel:

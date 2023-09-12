@@ -22,7 +22,7 @@ class Song:
 async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
         """Process query and returns a song instance"""
         # Logger
-        logger = logging.getLogger("music.song")
+        logger = logging.getLogger("yaemiko.music.song")
         # Skip process if user passed a youtube URL
         if query.startswith("https://www.youtube.com/watch?v="):
             src = query
@@ -52,7 +52,7 @@ async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
         
         ytdl = yt_dlp.YoutubeDL(YDL_OPTIONS)
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(src, download = False))
-        logger.debug(f"Extracted video data from URL {src}")
+        logger.debug(f"Extracted video data from URL {src[:24]}")
 
         title = data["title"]
         channel = data["uploader"]

@@ -1,6 +1,3 @@
-"""
-A module for informative commands
-"""
 import discord
 
 from discord.ext import commands
@@ -11,21 +8,31 @@ class Info(commands.Cog):
         self.client = client
 
     @commands.command()
-    async def info(self, ctx):
-        """Displays information about the bot"""
-        pf = self.client.prefix(self.client, ctx.message)
-        await ctx.send(
-            embed = discord.Embed(
-                title = "Yae Miko | information",
-                description = f"""v1.0 by corveaux
-                
-                **` Yae Miko `** provides **essential features** such as:
-                   - Server Management
-                   - Security
-                   - Entertainment (Games, Music)
-                   - and many more!
-                   
-                The prefix for Yae Miko commands is **` {pf} `**""",
-                colour = colors.pink
-            )
+    async def info(self, ctx: commands.Context):
+        embed = discord.Embed(
+            title=self.client.version.get("name"),
+            description=self.client.version.get("description"),
+            colour=colors.pink
         )
+        
+        embed.add_field(
+            name="Version",
+            value=self.client.version.get("version")
+        )
+
+        embed.add_field(
+            name="Author",
+            value=self.client.version.get("author")
+        )
+
+        embed.add_field(
+            name="GitHub URL",
+            value=self.client.version.get("url")
+        )
+
+        embed.add_field(
+            name="License",
+            value=self.client.version.get("license")
+        )
+
+        await ctx.send(embed=embed)
