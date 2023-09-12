@@ -27,10 +27,37 @@ class MusicCommands(commands.Cog):
     """Command class"""
     def __init__(self, client: commands.Bot) -> None:
         self.client = client
-        self.logger = logging.getLogger("music.commands")
+
+        self.client.logging_config["loggers"]["yaemiko.music"] = {
+            "handlers": ["debugHandler", "fileHandler"],
+            "level": "DEBUG",
+            "propagate": False
+        }
+
+        self.client.logging_config["loggers"]["yaemiko.music.ui"] = {
+            "handlers": ["debugHandler", "fileHandler"],
+            "level": "DEBUG",
+            "propagate": False
+        }
+
+        self.client.logging_config["loggers"]["yaemiko.music.player"] = {
+            "handlers": ["debugHandler", "fileHandler"],
+            "level": "DEBUG",
+            "propagate": False
+        }
+
+        self.client.logging_config["loggers"]["yaemiko.music.song"] = {
+            "handlers": ["debugHandler", "fileHandler"],
+            "level": "DEBUG",
+            "propagate": False
+        }
+
+        self.client.configure_logger()
+        self.logger = logging.getLogger("yaemiko.music")
+
         self.music  = Music()
         
-        with open(os.path.join(os.path.dirname(__file__), 'ydl_options.json'), 'r') as f:
+        with open(os.path.join(os.path.dirname(__file__), 'settings.json'), 'r') as f:
             self.MUSIC_SETTINGS = json.load(f)
 
     async def auto_disconnect(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
@@ -38,8 +65,6 @@ class MusicCommands(commands.Cog):
         # Settings
         feautre_enabled = self.MUSIC_SETTINGS.get("enable_auto_disconnect")
         timeout = self.MUSIC_SETTINGS.get("auto_disconnect_timeout")
-
-        print(feautre_enabled, timeout)
 
         if not feautre_enabled:
             return

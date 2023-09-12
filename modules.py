@@ -17,7 +17,7 @@ INSTALLED_MODULES = [
     'cogs.admin',
     'cogs.info',
     'cogs.music',
-    'cogs.slash',
-    'cogs.spam',
-    'cogs.game',
+    # 'cogs.slash',
+    # 'cogs.spam',
+    # 'cogs.game',
 ]

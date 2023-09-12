@@ -11,7 +11,7 @@ from .player import Player
 class Music:
     def __init__(self) -> None:
         self.__players  = {}
-        self.logger: logging.Logger = logging.getLogger("music")
+        self.logger: logging.Logger = logging.getLogger("yaemiko.music")
 
     def create_player(self, ctx: commands.Context) -> Player:
         """Create player instance"""

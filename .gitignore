@@ -13,3 +13,5 @@ logs/*
 !playlists/.gitkeep
 
 .env
+
+secrets.json

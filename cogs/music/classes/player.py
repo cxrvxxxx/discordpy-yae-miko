@@ -17,7 +17,7 @@ class Player:
         self.__ctx         : commands.Context           = ctx
         self.__is_playing  : bool                       = False
         self.__last_song   : Song                       = None
-        self.__logger      : logging.Logger             = logging.getLogger("music.player")
+        self.__logger      : logging.Logger             = logging.getLogger("yaemiko.music.player")
         self.__now_playing : Song                       = None
         self.__queue       : Queue                      = Queue()
         self.__volume      : float                      = 1.0
