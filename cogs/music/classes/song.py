@@ -26,7 +26,6 @@ async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
         # Skip process if user passed a youtube URL
         if query.startswith("https://www.youtube.com/watch?v="):
             src = query
-            logger.debug(f"Received video URL '{query}', parsing skipped")
         # Otherwise, process query to get a yotuube link
         else:
             search_url = "https://www.youtube.com/results?search_query="
@@ -34,12 +33,9 @@ async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
                 search_url += f"{key}+"
             search_url = search_url[:-1]
 
-            logger.debug(f"Parsed '{query}' query into YTSearch URL")
-
             async with aiohttp.ClientSession() as session:
                 async with session.get(search_url) as response:
                     html = await response.text()
-            logger.debug(f"Retrieved HTML data")
 
             src = "https://www.youtube.com/"
             for i in range(html.find("watch?v"), len(html)):
@@ -52,7 +48,8 @@ async def fetch_track(query: str, loop: asyncio.BaseEventLoop) -> Song:
         
         ytdl = yt_dlp.YoutubeDL(YDL_OPTIONS)
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(src, download = False))
-        logger.debug(f"Extracted video data from URL {src[:24]}")
+
+        logger.debug(f"Fetched video data for query: '{query}'")
 
         title = data["title"]
         channel = data["uploader"]

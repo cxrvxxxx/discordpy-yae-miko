@@ -87,7 +87,11 @@ class PlayerUI:
             icon_url="https://i.imgur.com/rcXLQLG.png"
         )
 
-        await interaction.response.send_message(embed=embed, delete_after=10)
+        try:
+            await interaction.response.send_message(embed=embed, delete_after=10)
+        except Exception as e:
+            self.logger.debug(f"{e}")
+            await self.channel.send(embed=embed, delete_after=10)
 
     async def delete_screen(self):
         if not self.screen:
